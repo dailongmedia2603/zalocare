@@ -1,5 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const topIcons = [
   "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gscw16ey_expires_30_days.png",
@@ -35,9 +40,16 @@ const Sidebar = () => {
           // The fifth icon (gear) links to settings
           if (index === 4) {
             return (
-              <Link to="/settings" key={index}>
-                <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
-              </Link>
+              <Tooltip key={index}>
+                <TooltipTrigger asChild>
+                  <Link to="/settings">
+                    <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-orange-100 text-orange-800 font-bold border-orange-200">
+                  <p>Cài đặt</p>
+                </TooltipContent>
+              </Tooltip>
             );
           }
           return <img key={index} src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />;
