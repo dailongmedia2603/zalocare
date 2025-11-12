@@ -6,15 +6,13 @@ import { ConversationInboxItem } from '@/types/chat';
 import { Phone, Video, Info, Paperclip, SendHorizonal, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { useMessages } from '@/hooks/use-chat';
-import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface ConversationPanelProps {
   conversation: ConversationInboxItem | null;
 }
 
 const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
-  // We now use conversation.id which is the threadId
   const { data: messages, isLoading } = useMessages(conversation?.id || null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 

@@ -13,21 +13,35 @@ const transformEventsToConversations = (events: any[]): ConversationInboxItem[] 
 
   // Process all events to build the conversation list
   for (const event of events) {
-    const threadId = event.zalo_thread_id;
+    const threadId = event.threadId;
     
-    // We only care about the latest message for the inbox view
+    // Since the list is sorted by time, the first time we see a threadId, it's the latest message
     if (!conversationMap.has(threadId)) {
-      const customer: ZaloCustomer = {
-        id: event.sender_zalo_id, // Using zalo_id as the main identifier for customer
-        zalo_id: event.sender_zalo_id,
-        display_name: event.sender_display_name,
-        avatar_url: null, // Can be added later if available
-      };
+      // Find the customer for this thread (the one who is not 'self')
+      const customerEvent = events.find(e => e.threadId === threadId && e.isSelf === false);
+      
+      let customer: ZaloCustomer;
+      if (customerEvent) {
+        customer = {
+          id: customerEvent.uidFrom,
+          zalo_id: customerEvent.uidFrom,
+          display_name: customerEvent.dName,
+          avatar_url: null,
+        };
+      } else {
+        // Fallback if only agent messages exist (unlikely)
+        customer = {
+          id: event.uidFrom,
+          zalo_id: event.uidFrom,
+          display_name: event.dName,
+          avatar_url: null,
+        };
+      }
 
       conversationMap.set(threadId, {
-        id: threadId, // Use threadId as the unique conversation ID
+        id: threadId,
         last_message_preview: event.content,
-        last_message_at: event.sent_at,
+        last_message_at: event.ts,
         unread_count: 0, // Unread count logic needs to be implemented separately
         customer: customer,
       });
@@ -43,11 +57,10 @@ export const useConversations = () => {
   return useQuery<ConversationInboxItem[]>({
     queryKey: ['conversations'],
     queryFn: async () => {
-      // This query cleverly gets the latest message for each conversation thread
       const { data, error } = await supabase
         .from('zalo_events')
         .select('*')
-        .order('sent_at', { ascending: false });
+        .order('ts', { ascending: false });
 
       if (error) throw new Error(error.message);
       
@@ -65,19 +78,19 @@ export const useMessages = (threadId: string | null) => {
             const { data, error } = await supabase
                 .from('zalo_events')
                 .select('*')
-                .eq('zalo_thread_id', threadId)
-                .order('sent_at', { ascending: true });
+                .eq('threadId', threadId)
+                .order('ts', { ascending: true });
 
             if (error) throw new Error(error.message);
             
             // Map the flat event data to the ZaloMessage type
             return data.map(event => ({
               id: event.id,
-              conversation_id: event.zalo_thread_id,
+              conversation_id: event.threadId,
               content: event.content,
-              sent_at: event.sent_at,
-              is_from_customer: event.is_from_customer,
-              sender_zalo_id: event.sender_zalo_id,
+              sent_at: event.ts,
+              is_from_customer: !event.isSelf,
+              sender_zalo_id: event.uidFrom,
             }));
         },
         enabled: !!threadId,
