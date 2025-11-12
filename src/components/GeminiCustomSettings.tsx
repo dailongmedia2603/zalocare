@@ -160,7 +160,7 @@ const GeminiCustomSettings = () => {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex gap-2">
-          <Button onClick={handleSave} disabled={isSaving || !apiUrl}>
+          <Button onClick={handleSave} disabled={isSaving || !apiUrl} className="bg-orange-500 hover:bg-orange-600 text-white">
             {isSaving ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -206,7 +206,7 @@ const GeminiCustomSettings = () => {
             rows={4}
           />
         </div>
-        <Button onClick={handleSendPrompt} disabled={isSendingPrompt || !testPrompt} className="mt-2">
+        <Button onClick={handleSendPrompt} disabled={isSendingPrompt || !testPrompt} className="mt-2 bg-orange-500 hover:bg-orange-600 text-white">
           {isSendingPrompt && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {isSendingPrompt ? 'Đang gửi...' : 'Gửi yêu cầu'}
         </Button>
@@ -214,9 +214,15 @@ const GeminiCustomSettings = () => {
         {testResponse && (
           <div className="mt-4">
             <Label>Kết quả trả về</Label>
-            <pre className="mt-2 p-4 bg-gray-100 rounded-md text-sm overflow-x-auto">
-              <code>{JSON.stringify(testResponse, null, 2)}</code>
-            </pre>
+            <div className="mt-2 p-4 bg-gray-100 rounded-md text-sm overflow-auto max-h-60">
+              <pre className="whitespace-pre-wrap break-words">
+                <code>
+                  {typeof testResponse === 'object' && testResponse !== null && testResponse.answer
+                    ? testResponse.answer
+                    : JSON.stringify(testResponse, null, 2)}
+                </code>
+              </pre>
+            </div>
           </div>
         )}
       </div>
