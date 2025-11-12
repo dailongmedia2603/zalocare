@@ -6,32 +6,33 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { LineChart, Filter, Database, FileText, Settings, HelpCircle, UserCircle } from 'lucide-react';
 
 const topNavItems = [
   {
     path: '/',
-    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gscw16ey_expires_30_days.png",
+    Icon: LineChart,
     tooltip: "Trang chủ"
   },
   {
-    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/07w0lrq8_expires_30_days.png",
+    Icon: Filter,
   },
   {
-    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gp6enmol_expires_30_days.png",
+    Icon: Database,
   },
   {
-    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2z2zk51q_expires_30_days.png",
+    Icon: FileText,
   },
   {
     path: '/settings',
-    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/pj4kofh0_expires_30_days.png",
+    Icon: Settings,
     tooltip: "Cài đặt"
   }
 ];
 
-const bottomIcons = [
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/72mbty4v_expires_30_days.png",
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/4qxt04z1_expires_30_days.png",
+const bottomNavItems = [
+  { Icon: HelpCircle },
+  { Icon: UserCircle },
 ];
 
 const Sidebar = () => {
@@ -44,21 +45,28 @@ const Sidebar = () => {
       />
       <div className="flex flex-col items-center self-stretch flex-grow gap-3">
         {topNavItems.map((item, index) => {
+          const { Icon } = item;
+          
           if (!item.path) {
-            return <img key={index} src={item.icon} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />;
+            return (
+              <div key={index} className="flex items-center justify-center w-8 h-8">
+                <Icon className="w-5 h-5 text-gray-600" />
+              </div>
+            );
           }
 
+          const navLinkContent = ({ isActive }: { isActive: boolean }) => (
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg",
+              isActive && "bg-white border border-blue-200 shadow-sm"
+            )}>
+              <Icon className={cn("w-5 h-5", isActive ? "text-orange-500" : "text-gray-600")} />
+            </div>
+          );
+
           const navLink = (
-            <NavLink
-              to={item.path}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center justify-center w-8 h-8 rounded-lg",
-                  isActive && "bg-white border border-blue-200 shadow-sm"
-                )
-              }
-            >
-              <img src={item.icon} className="w-5 h-5 object-contain" alt={item.tooltip || `icon ${index + 1}`} />
+            <NavLink to={item.path}>
+              {({ isActive }) => navLinkContent({ isActive })}
             </NavLink>
           );
 
@@ -79,8 +87,10 @@ const Sidebar = () => {
         })}
       </div>
       <div className="flex flex-col items-center self-stretch gap-3 mt-4">
-        {bottomIcons.map((src, index) => (
-          <img key={index} src={src} className="w-8 h-8 object-fill" alt={`bottom icon ${index + 1}`} />
+        {bottomNavItems.map(({ Icon }, index) => (
+           <div key={index} className="flex items-center justify-center w-8 h-8">
+             <Icon className="w-5 h-5 text-gray-600" />
+           </div>
         ))}
       </div>
     </aside>
