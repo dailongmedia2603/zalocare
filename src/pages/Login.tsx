@@ -18,10 +18,10 @@ const Login = () => {
           </span>
         </div>
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
-          Chào mừng trở lại Tương lai của AI
+          Giải pháp CSKH Zalo tự động
         </h1>
         <p className="text-gray-600 max-w-md">
-          Đăng nhập để điều khiển dòng thời gian AI của bạn, quản lý khách hàng và khám phá những hiểu biết mạnh mẽ với Torse.ai.
+          Ứng dụng AI để chăm sóc khách hàng cũ toàn diện, giúp bạn không "BỎ QUÊN" bất kì khách hàng tiềm năng nào.
         </p>
         <Sparkles className="w-16 h-16 text-orange-500 mt-8" />
       </div>
