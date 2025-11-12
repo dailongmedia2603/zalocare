@@ -17,7 +17,7 @@ const transformEventsToConversations = (events: any[]): ConversationInboxItem[] 
     
     // Since the list is sorted by time, the first time we see a threadId, it's the latest message
     if (!conversationMap.has(threadId)) {
-      // Find the customer for this thread (the one who is not 'self')
+      // Find an event from the customer in this thread to get their details
       const customerEvent = events.find(e => e.threadId === threadId && e.isSelf === false);
       
       let customer: ZaloCustomer;
@@ -25,15 +25,18 @@ const transformEventsToConversations = (events: any[]): ConversationInboxItem[] 
         customer = {
           id: customerEvent.uidFrom,
           zalo_id: customerEvent.uidFrom,
-          display_name: customerEvent.dName,
-          avatar_url: null,
+          display_name: customerEvent.dName || 'Khách hàng',
+          avatar_url: null, // Avatar URL needs to be sourced from somewhere else
         };
       } else {
-        // Fallback if only agent messages exist (unlikely)
+        // Fallback if only agent messages exist in the fetched data (e.g., agent started conversation)
+        // We'll try to get customer ID from the `idTo` field of an agent's message
+        const agentEvent = events.find(e => e.threadId === threadId && e.isSelf === true);
+        const customerId = agentEvent ? agentEvent.idTo : 'unknown';
         customer = {
-          id: event.uidFrom,
-          zalo_id: event.uidFrom,
-          display_name: event.dName,
+          id: customerId,
+          zalo_id: customerId,
+          display_name: 'Khách hàng', // We don't have the customer's name in this case
           avatar_url: null,
         };
       }
@@ -107,10 +110,32 @@ export const useChatSubscription = () => {
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'zalo_events' },
-                () => {
-                    // Invalidate both queries when a new message arrives
+                (payload) => {
+                    const newMessage = payload.new as any;
+
+                    // 1. Invalidate the conversations list to update previews and order
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                    queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+                    // 2. Update the messages for the specific conversation in real-time
+                    queryClient.setQueryData(['messages', newMessage.threadId], (oldData: ZaloMessage[] | undefined) => {
+                        if (oldData === undefined) return [];
+                        
+                        // Avoid adding duplicates
+                        if (oldData.some(msg => msg.id === newMessage.id)) {
+                            return oldData;
+                        }
+
+                        const formattedMessage: ZaloMessage = {
+                            id: newMessage.id,
+                            conversation_id: newMessage.threadId,
+                            content: newMessage.content,
+                            sent_at: newMessage.ts,
+                            is_from_customer: !newMessage.isSelf,
+                            sender_zalo_id: newMessage.uidFrom,
+                        };
+                        
+                        return [...oldData, formattedMessage];
+                    });
                 }
             )
             .subscribe();
