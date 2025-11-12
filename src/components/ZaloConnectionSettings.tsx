@@ -27,7 +27,7 @@ const ZaloConnectionSettings = () => {
         if (data && data.zalo_oa_id) {
           setZaloOaId(data.zalo_oa_id);
         }
-        if (error && error.code !== 'PGRST116') {
+        if (error && error.code !== 'PGRST116') { // Ignore 'no rows found' error
           console.error('Error fetching profile:', error);
           showError('Không thể tải thông tin kết nối.');
         }
@@ -47,10 +47,17 @@ const ZaloConnectionSettings = () => {
       return;
     }
     setIsSaving(true);
+    
+    // Use upsert instead of update to handle both new and existing profiles
     const { error } = await supabase
       .from('profiles')
-      .update({ zalo_oa_id: zaloOaId, updated_at: new Date().toISOString() })
-      .eq('id', userId);
+      .upsert({ 
+        id: userId, // The user's ID
+        zalo_oa_id: zaloOaId, 
+        updated_at: new Date().toISOString() 
+      }, { 
+        onConflict: 'id' // If a profile with this 'id' exists, update it
+      });
 
     if (error) {
       showError('Lưu kết nối thất bại.');
