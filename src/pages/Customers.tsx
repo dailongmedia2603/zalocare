@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -30,7 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -69,11 +69,32 @@ const useCustomers = (page: number, pageSize: number) => {
 
 
 const Customers = () => {
+  const queryClient = useQueryClient();
   const [date, setDate] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
   const pageSize = 7; // Number of items per page, similar to the image
 
   const { data, isLoading, isError } = useCustomers(page, pageSize);
+
+  // Real-time subscription for the customers table
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-customers-page')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'customers' },
+        () => {
+          // Invalidate the query to trigger a refetch
+          queryClient.invalidateQueries({ queryKey: ['customers'] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on component unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const customers = data?.customers || [];
   const totalCustomers = data?.count || 0;
