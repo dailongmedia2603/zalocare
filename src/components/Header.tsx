@@ -1,15 +1,24 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import {
+  Users,
+  MessageSquare,
+  Lightbulb,
+  BarChart3,
+  CloudCog,
+  Workflow,
+  ClipboardList,
+} from 'lucide-react';
 
 const navItems = [
-  { path: "/contacts", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/1jxzwqpc_expires_30_days.png", label: "Contacts" },
-  { path: "/conversations", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/e3deuq39_expires_30_days.png", label: "Conversations" },
-  { path: "/marketing", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/li9drns7_expires_30_days.png", label: "Marketing" },
-  { path: "/sales", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/qvwnbdep_expires_30_days.png", label: "Sales" },
-  { path: "/services", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/5bojggco_expires_30_days.png", label: "Services" },
-  { path: "/automation", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/h59t4z2w_expires_30_days.png", label: "Automation" },
-  { path: "/reporting", icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/8plfi5m1_expires_30_days.png", label: "Reporting" },
+  { path: "/contacts", Icon: Users, label: "Contacts" },
+  { path: "/conversations", Icon: MessageSquare, label: "Conversations" },
+  { path: "/marketing", Icon: Lightbulb, label: "Marketing" },
+  { path: "/sales", Icon: BarChart3, label: "Sales" },
+  { path: "/services", Icon: CloudCog, label: "Services" },
+  { path: "/automation", Icon: Workflow, label: "Automation" },
+  { path: "/reporting", Icon: ClipboardList, label: "Reporting" },
 ];
 
 const Header = () => {
@@ -34,10 +43,11 @@ const Header = () => {
           >
             {({ isActive }) => (
               <>
-                <img
-                  src={item.icon}
-                  className="w-5 h-5 object-fill"
-                  alt={`${item.label} icon`}
+                <item.Icon
+                  className={cn(
+                    "w-5 h-5",
+                    isActive ? "text-orange-500" : "text-[#4E657F]"
+                  )}
                 />
                 <span className={cn("text-sm", isActive ? "text-black font-bold" : "text-[#4E657F]")}>
                   {item.label}
