@@ -27,7 +27,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="flex flex-col items-center bg-white p-2 rounded-lg border border-solid border-[#EDEDED] w-16">
+    <aside className="flex flex-col items-center w-16">
       <div className="flex flex-col items-center self-stretch gap-2">
         {navItems.map((item) => {
           const Icon = item.icon;
