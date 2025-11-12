@@ -56,14 +56,22 @@ const Sidebar = () => {
               "flex items-center justify-center w-8 h-8 rounded-md",
               isActive && "bg-gray-100 border border-solid border-gray-200"
             )}>
-              <img 
-                src={item.icon} 
-                className="w-5 h-5 object-contain"
-                alt={item.tooltip}
-                style={isActive ? { 
-                  filter: 'invert(55%) sepia(86%) saturate(1557%) hue-rotate(351deg) brightness(100%) contrast(102%)'
-                } : {}}
-              />
+              {isActive ? (
+                <div className="flex items-center justify-center w-6 h-6 bg-orange-500 rounded-md">
+                  <img 
+                    src={item.icon} 
+                    className="w-4 h-4 object-contain"
+                    alt={item.tooltip}
+                    style={{ filter: 'brightness(0) invert(1)' }}
+                  />
+                </div>
+              ) : (
+                <img 
+                  src={item.icon} 
+                  className="w-5 h-5 object-contain"
+                  alt={item.tooltip}
+                />
+              )}
             </div>
           );
 
