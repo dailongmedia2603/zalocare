@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LineChart,
   Filter,
@@ -16,18 +17,17 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { name: 'Analytics', icon: LineChart, color: 'text-gray-700' },
-  { name: 'Filter', icon: Filter, color: 'text-orange-500' },
-  { name: 'Database', icon: Database, color: 'text-gray-700' },
-  { name: 'Cấu hình Promt', icon: Wand2, color: 'text-gray-700' },
-  { name: 'Cài đặt', icon: Settings2, color: 'text-gray-700' },
+  { name: 'Analytics', icon: LineChart, color: 'text-gray-700', path: undefined },
+  { name: 'Filter', icon: Filter, color: 'text-orange-500', path: undefined },
+  { name: 'Database', icon: Database, color: 'text-gray-700', path: undefined },
+  { name: 'Cấu hình Promt', icon: Wand2, color: 'text-gray-700', path: '/prompt-config' },
+  { name: 'Cài đặt', icon: Settings2, color: 'text-gray-700', path: '/settings' },
 ];
 
 const Sidebar = () => {
-  const [activeItem, setActiveItem] = useState('Analytics'); // Default to first item
+  const location = useLocation();
 
   const handleItemClick = (name: string) => {
-    setActiveItem(name);
     showSuccess(`Opened ${name}`);
   };
 
@@ -36,23 +36,28 @@ const Sidebar = () => {
       <div className="flex flex-col items-center self-stretch gap-2">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeItem === item.name;
+          const isActive = location.pathname === item.path;
+
+          const button = (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'w-10 h-10 rounded-lg border',
+                isActive
+                  ? 'bg-gray-100 border-gray-300'
+                  : 'bg-white border-gray-200 hover:bg-gray-100',
+              )}
+              onClick={!item.path ? () => handleItemClick(item.name) : undefined}
+            >
+              <Icon className={cn('w-5 h-5', item.color)} />
+            </Button>
+          );
+
           return (
             <Tooltip key={item.name}>
               <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    'w-10 h-10 rounded-lg border',
-                    isActive
-                      ? 'bg-gray-100 border-gray-300'
-                      : 'bg-white border-gray-200 hover:bg-gray-100',
-                  )}
-                  onClick={() => handleItemClick(item.name)}
-                >
-                  <Icon className={cn('w-5 h-5', item.color)} />
-                </Button>
+                {item.path ? <NavLink to={item.path}>{button}</NavLink> : button}
               </TooltipTrigger>
               <TooltipContent side="right">
                 <p>{item.name}</p>
