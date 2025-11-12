@@ -106,36 +106,42 @@ export const useChatSubscription = () => {
 
     useEffect(() => {
         const channel = supabase
-            .channel('zalo-chat-changes')
+            .channel('zalo-chat-changes-*') // Sử dụng wildcard để đảm bảo kênh là duy nhất
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'zalo_events' },
                 (payload) => {
                     const newMessage = payload.new as any;
 
-                    // 1. Invalidate the conversations list to update previews and order
+                    // 1. Tải lại danh sách cuộc trò chuyện để cập nhật hộp thư
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-                    // 2. Update the messages for the specific conversation in real-time
-                    queryClient.setQueryData(['messages', newMessage.threadId], (oldData: ZaloMessage[] | undefined) => {
-                        if (oldData === undefined) return [];
-                        
-                        // Avoid adding duplicates
-                        if (oldData.some(msg => msg.id === newMessage.id)) {
-                            return oldData;
-                        }
+                    // 2. Cập nhật trực tiếp tin nhắn cho cuộc trò chuyện đang mở
+                    queryClient.setQueryData(
+                        ['messages', newMessage.threadId], 
+                        (oldData: ZaloMessage[] | undefined) => {
+                            const formattedMessage: ZaloMessage = {
+                                id: newMessage.id,
+                                conversation_id: newMessage.threadId,
+                                content: newMessage.content,
+                                sent_at: newMessage.ts,
+                                is_from_customer: !newMessage.isSelf,
+                                sender_zalo_id: newMessage.uidFrom,
+                            };
 
-                        const formattedMessage: ZaloMessage = {
-                            id: newMessage.id,
-                            conversation_id: newMessage.threadId,
-                            content: newMessage.content,
-                            sent_at: newMessage.ts,
-                            is_from_customer: !newMessage.isSelf,
-                            sender_zalo_id: newMessage.uidFrom,
-                        };
-                        
-                        return [...oldData, formattedMessage];
-                    });
+                            // Nếu chưa có dữ liệu cũ, tạo mới với tin nhắn này
+                            if (!oldData) {
+                                return [formattedMessage];
+                            }
+
+                            // Tránh thêm tin nhắn trùng lặp
+                            if (oldData.some(msg => msg.id === newMessage.id)) {
+                                return oldData;
+                            }
+                            
+                            return [...oldData, formattedMessage];
+                        }
+                    );
                 }
             )
             .subscribe();
