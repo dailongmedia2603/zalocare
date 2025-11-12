@@ -45,11 +45,6 @@ const Header = () => {
           alt="icon 1"
         />
         <img
-          src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/4fxasgcy_expires_30_days.png"}
-          className="w-[30px] h-[30px] object-fill"
-          alt="icon 2"
-        />
-        <img
           src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/483uqjj3_expires_30_days.png"}
           className="w-[30px] h-[30px] object-fill"
           alt="icon 3"
