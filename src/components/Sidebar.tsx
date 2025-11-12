@@ -1,17 +1,35 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from '@/lib/utils';
 
-const topIcons = [
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gscw16ey_expires_30_days.png",
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/07w0lrq8_expires_30_days.png",
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gp6enmol_expires_30_days.png",
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2z2zk51q_expires_30_days.png",
-  "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/pj4kofh0_expires_30_days.png",
+const topNavItems = [
+  {
+    path: '/',
+    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gscw16ey_expires_30_days.png",
+    tooltip: "Trang chủ",
+  },
+  {
+    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/07w0lrq8_expires_30_days.png",
+    tooltip: "Icon 2",
+  },
+  {
+    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gp6enmol_expires_30_days.png",
+    tooltip: "Icon 3",
+  },
+  {
+    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2z2zk51q_expires_30_days.png",
+    tooltip: "Icon 4",
+  },
+  {
+    path: '/settings',
+    icon: "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/pj4kofh0_expires_30_days.png",
+    tooltip: "Cài đặt",
+  },
 ];
 
 const bottomIcons = [
@@ -20,6 +38,8 @@ const bottomIcons = [
 ];
 
 const Sidebar = () => {
+  const location = useLocation();
+
   return (
     <aside className="flex flex-col items-center w-8">
       <img
@@ -28,31 +48,45 @@ const Sidebar = () => {
         alt="divider"
       />
       <div className="flex flex-col items-center self-stretch flex-grow gap-3">
-        {topIcons.map((src, index) => {
-          // The first icon links to home
-          if (index === 0) {
-            return (
-              <Link to="/" key={index}>
-                <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
-              </Link>
-            );
-          }
-          // The fifth icon (gear) links to settings
-          if (index === 4) {
+        {topNavItems.map((item, index) => {
+          const isActive = item.path ? location.pathname === item.path : false;
+
+          const iconContent = (
+            <div className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-md",
+              isActive && "bg-gray-100 border border-solid border-gray-200"
+            )}>
+              <img 
+                src={item.icon} 
+                className="w-5 h-5 object-contain"
+                alt={item.tooltip}
+                style={isActive ? { 
+                  filter: 'invert(55%) sepia(86%) saturate(1557%) hue-rotate(351deg) brightness(100%) contrast(102%)'
+                } : {}}
+              />
+            </div>
+          );
+
+          if (item.path) {
             return (
               <Tooltip key={index}>
                 <TooltipTrigger asChild>
-                  <Link to="/settings">
-                    <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
+                  <Link to={item.path}>
+                    {iconContent}
                   </Link>
                 </TooltipTrigger>
                 <TooltipContent side="right" className="bg-orange-100 text-orange-800 border-orange-200">
-                  <p>Cài đặt</p>
+                  <p>{item.tooltip}</p>
                 </TooltipContent>
               </Tooltip>
             );
           }
-          return <img key={index} src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />;
+          
+          return (
+            <div key={index} className="flex items-center justify-center w-8 h-8">
+              <img src={item.icon} className="w-5 h-5 object-contain" alt={item.tooltip} />
+            </div>
+          );
         })}
       </div>
       <div className="flex flex-col items-center self-stretch gap-3 mt-4">
