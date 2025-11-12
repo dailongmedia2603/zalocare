@@ -46,7 +46,7 @@ const Sidebar = () => {
                     <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
                   </Link>
                 </TooltipTrigger>
-                <TooltipContent side="right" className="bg-orange-100 text-orange-800 font-bold border-orange-200">
+                <TooltipContent side="right" className="bg-orange-100 text-orange-800 border-orange-200">
                   <p>Cài đặt</p>
                 </TooltipContent>
               </Tooltip>
