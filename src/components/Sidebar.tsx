@@ -5,7 +5,7 @@ import {
   Filter,
   Database,
   Wand2,
-  Settings2,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,7 @@ const navItems = [
   { name: 'Filter', icon: Filter, path: undefined },
   { name: 'Database', icon: Database, path: undefined },
   { name: 'Cấu hình Promt', icon: Wand2, path: '/prompt-config' },
-  { name: 'Cài đặt', icon: Settings2, path: '/settings' },
+  { name: 'Cài đặt', icon: Settings, path: '/settings' },
 ];
 
 const Sidebar = () => {
