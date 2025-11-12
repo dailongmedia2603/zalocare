@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const topIcons = [
   "https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/gscw16ey_expires_30_days.png",
@@ -22,9 +23,25 @@ const Sidebar = () => {
         alt="divider"
       />
       <div className="flex flex-col items-center self-stretch flex-grow gap-3">
-        {topIcons.map((src, index) => (
-          <img key={index} src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
-        ))}
+        {topIcons.map((src, index) => {
+          // The first icon links to home
+          if (index === 0) {
+            return (
+              <Link to="/" key={index}>
+                <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
+              </Link>
+            );
+          }
+          // The fifth icon (gear) links to settings
+          if (index === 4) {
+            return (
+              <Link to="/settings" key={index}>
+                <img src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />
+              </Link>
+            );
+          }
+          return <img key={index} src={src} className="w-8 h-8 object-fill" alt={`icon ${index + 1}`} />;
+        })}
       </div>
       <div className="flex flex-col items-center self-stretch gap-3 mt-4">
         {bottomIcons.map((src, index) => (
