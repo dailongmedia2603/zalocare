@@ -3,12 +3,10 @@ import { ZaloMessage } from '@/types/chat';
 
 interface MessageBubbleProps {
   message: ZaloMessage;
-  customerZaloId: string;
 }
 
-const MessageBubble = ({ message, customerZaloId }: MessageBubbleProps) => {
-  // A message is "from me" if the sender is NOT the customer
-  const isMe = message.sender_zalo_id !== customerZaloId;
+const MessageBubble = ({ message }: MessageBubbleProps) => {
+  const isMe = !message.is_from_customer;
 
   return (
     <div className={cn('flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>

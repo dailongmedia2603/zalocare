@@ -14,18 +14,10 @@ interface ConversationPanelProps {
 }
 
 const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
+  // We now use conversation.id which is the threadId
   const { data: messages, isLoading } = useMessages(conversation?.id || null);
-  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-    };
-    getUser();
-  }, []);
-  
   useEffect(() => {
     // Scroll to bottom when new messages arrive
     if (scrollAreaRef.current) {
@@ -70,7 +62,7 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
             </div>
           ) : (
             messages?.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} customerZaloId={conversation.customer.zalo_id} />
+              <MessageBubble key={msg.id} message={msg} />
             ))
           )}
         </div>
