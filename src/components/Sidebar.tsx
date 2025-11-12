@@ -17,11 +17,11 @@ import {
 } from "@/components/ui/tooltip";
 
 const navItems = [
-  { name: 'Analytics', icon: LineChart, color: 'text-gray-700', path: undefined },
-  { name: 'Filter', icon: Filter, color: 'text-orange-500', path: undefined },
-  { name: 'Database', icon: Database, color: 'text-gray-700', path: undefined },
-  { name: 'Cấu hình Promt', icon: Wand2, color: 'text-gray-700', path: '/prompt-config' },
-  { name: 'Cài đặt', icon: Settings2, color: 'text-gray-700', path: '/settings' },
+  { name: 'Analytics', icon: LineChart, path: undefined },
+  { name: 'Filter', icon: Filter, path: undefined },
+  { name: 'Database', icon: Database, path: undefined },
+  { name: 'Cấu hình Promt', icon: Wand2, path: '/prompt-config' },
+  { name: 'Cài đặt', icon: Settings2, path: '/settings' },
 ];
 
 const Sidebar = () => {
@@ -50,7 +50,7 @@ const Sidebar = () => {
               )}
               onClick={!item.path ? () => handleItemClick(item.name) : undefined}
             >
-              <Icon className={cn('w-5 h-5', item.color)} />
+              <Icon className={cn('w-5 h-5', isActive ? 'text-orange-500' : 'text-gray-700')} />
             </Button>
           );
 
