@@ -39,7 +39,10 @@ const Header = () => {
               end // Important for the root path to not match all other paths
               className={({ isActive }) =>
                 cn(
-                  'flex items-center py-2 px-3 gap-2 rounded-md hover:bg-gray-100 transition-colors'
+                  'flex items-center py-2 px-3 gap-2 transition-colors border-b-2',
+                  isActive
+                    ? 'border-orange-500'
+                    : 'border-transparent hover:bg-gray-100 rounded-md'
                 )
               }
             >
