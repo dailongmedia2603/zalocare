@@ -4,42 +4,29 @@ import { useEffect } from 'react';
 import { ConversationInboxItem, ZaloMessage, ZaloCustomer } from '@/types/chat';
 
 // This function transforms the flat data from zalo_events into a structured conversation list
-const transformEventsToConversations = (events: any[]): ConversationInboxItem[] => {
+const transformEventsToConversations = (
+  events: any[],
+  customersData: Map<string, { display_name: string | null, avatar_url: string | null }>
+): ConversationInboxItem[] => {
   if (!events || events.length === 0) {
     return [];
   }
 
   const conversationMap = new Map<string, ConversationInboxItem>();
 
-  // Process all events to build the conversation list
   for (const event of events) {
-    const threadId = event.threadId;
+    const threadId = event.threadId; // threadId is the customer's Zalo ID
     
-    // Since the list is sorted by time, the first time we see a threadId, it's the latest message
     if (!conversationMap.has(threadId)) {
-      // Find an event from the customer in this thread to get their details
       const customerEvent = events.find(e => e.threadId === threadId && e.isSelf === false);
-      
-      let customer: ZaloCustomer;
-      if (customerEvent) {
-        customer = {
-          id: customerEvent.uidFrom,
-          zalo_id: customerEvent.uidFrom,
-          display_name: customerEvent.dName || 'Khách hàng',
-          avatar_url: null, // Avatar URL needs to be sourced from somewhere else
-        };
-      } else {
-        // Fallback if only agent messages exist in the fetched data (e.g., agent started conversation)
-        // We'll try to get customer ID from the `idTo` field of an agent's message
-        const agentEvent = events.find(e => e.threadId === threadId && e.isSelf === true);
-        const customerId = agentEvent ? agentEvent.idTo : 'unknown';
-        customer = {
-          id: customerId,
-          zalo_id: customerId,
-          display_name: 'Khách hàng', // We don't have the customer's name in this case
-          avatar_url: null,
-        };
-      }
+      const customerProfile = customersData.get(threadId);
+
+      const customer: ZaloCustomer = {
+        id: threadId,
+        zalo_id: threadId,
+        display_name: customerProfile?.display_name || customerEvent?.dName || 'Khách hàng',
+        avatar_url: customerProfile?.avatar_url || null,
+      };
 
       conversationMap.set(threadId, {
         id: threadId,
@@ -60,14 +47,39 @@ export const useConversations = () => {
   return useQuery<ConversationInboxItem[]>({
     queryKey: ['conversations'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: events, error } = await supabase
         .from('zalo_events')
         .select('*')
         .order('ts', { ascending: false });
 
       if (error) throw new Error(error.message);
+      if (!events || events.length === 0) return [];
+
+      // 1. Get unique customer Zalo IDs from the threadId of events
+      const customerZaloIds = [...new Set(events.map(e => e.threadId))];
+
+      // 2. Fetch customer details from the new 'customers' table
+      let customersData = new Map<string, { display_name: string | null, avatar_url: string | null }>();
+      if (customerZaloIds.length > 0) {
+        const { data: profiles, error: profileError } = await supabase
+          .from('customers')
+          .select('zalo_id, display_name, avatar_url')
+          .in('zalo_id', customerZaloIds);
+
+        if (profileError) {
+          console.error("Error fetching customer profiles:", profileError);
+        } else if (profiles) {
+          for (const profile of profiles) {
+            customersData.set(profile.zalo_id, {
+              display_name: profile.display_name,
+              avatar_url: profile.avatar_url,
+            });
+          }
+        }
+      }
       
-      return transformEventsToConversations(data);
+      // 3. Pass the customer data to the transform function
+      return transformEventsToConversations(events, customersData);
     },
   });
 };
