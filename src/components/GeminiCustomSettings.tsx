@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plug, Loader2, Save } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Plug, Loader2, Save, CheckCircle2, XCircle } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,6 +14,10 @@ const GeminiCustomSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
+  const [testPrompt, setTestPrompt] = useState('Nguyễn Quang Hải là ai?');
+  const [isSendingPrompt, setIsSendingPrompt] = useState(false);
+  const [testResponse, setTestResponse] = useState<any>(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -63,6 +68,7 @@ const GeminiCustomSettings = () => {
       return;
     }
     setIsTesting(true);
+    setConnectionStatus(null);
     try {
       const { data, error } = await supabase.functions.invoke('test-gemini-api', {
         body: { apiUrl },
@@ -74,14 +80,47 @@ const GeminiCustomSettings = () => {
 
       if (data.success) {
         showSuccess('Kết nối thành công!');
+        setConnectionStatus('success');
       } else {
         showError(`Kết nối thất bại: ${data.message || 'Lỗi không xác định'}`);
+        setConnectionStatus('error');
       }
     } catch (error: any) {
       showError('Kết nối thất bại. Vui lòng kiểm tra lại URL.');
+      setConnectionStatus('error');
       console.error('Function Invoke Error:', error);
     } finally {
       setIsTesting(false);
+    }
+  };
+
+  const handleSendPrompt = async () => {
+    if (!apiUrl) {
+      showError('Vui lòng nhập URL API trước.');
+      return;
+    }
+    if (!testPrompt) {
+      showError('Vui lòng nhập nội dung để kiểm tra.');
+      return;
+    }
+    setIsSendingPrompt(true);
+    setTestResponse(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('test-gemini-api', {
+        body: { apiUrl, prompt: testPrompt },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setTestResponse(data);
+    } catch (error: any) {
+      showError('Gửi yêu cầu thất bại.');
+      setTestResponse({ error: 'Gửi yêu cầu thất bại.', details: error.message });
+      console.error('Prompt Test Error:', error);
+    } finally {
+      setIsSendingPrompt(false);
     }
   };
 
@@ -119,23 +158,67 @@ const GeminiCustomSettings = () => {
           placeholder="https://your-api-endpoint.com/chat"
         />
       </div>
-      <div className="flex gap-2">
-        <Button onClick={handleSave} disabled={isSaving || !apiUrl}>
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {isSaving ? 'Đang lưu...' : 'Lưu'}
+      <div className="flex items-center gap-4">
+        <div className="flex gap-2">
+          <Button onClick={handleSave} disabled={isSaving || !apiUrl}>
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {isSaving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+          <Button onClick={handleTestConnection} disabled={isTesting || !apiUrl}>
+            {isTesting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Plug className="mr-2 h-4 w-4" />
+            )}
+            {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
+          </Button>
+        </div>
+        {connectionStatus === 'success' && (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-semibold">Kết nối thành công</span>
+          </div>
+        )}
+        {connectionStatus === 'error' && (
+          <div className="flex items-center gap-2 text-red-600">
+            <XCircle className="h-5 w-5" />
+            <span className="font-semibold">Kết nối thất bại</span>
+          </div>
+        )}
+      </div>
+
+      <div className="pt-6 border-t">
+        <h4 className="text-md font-semibold mb-2">Kiểm tra API</h4>
+        <p className="text-sm text-gray-500 mb-4">
+          Gửi một yêu cầu đến API của bạn để xem kết quả trả về.
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="test-prompt">Nội dung</Label>
+          <Textarea
+            id="test-prompt"
+            value={testPrompt}
+            onChange={(e) => setTestPrompt(e.target.value)}
+            placeholder="Nhập nội dung bạn muốn gửi..."
+            rows={4}
+          />
+        </div>
+        <Button onClick={handleSendPrompt} disabled={isSendingPrompt || !testPrompt} className="mt-2">
+          {isSendingPrompt && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {isSendingPrompt ? 'Đang gửi...' : 'Gửi yêu cầu'}
         </Button>
-        <Button onClick={handleTestConnection} disabled={isTesting || !apiUrl}>
-          {isTesting ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Plug className="mr-2 h-4 w-4" />
-          )}
-          {isTesting ? 'Đang kiểm tra...' : 'Kiểm tra kết nối'}
-        </Button>
+
+        {testResponse && (
+          <div className="mt-4">
+            <Label>Kết quả trả về</Label>
+            <pre className="mt-2 p-4 bg-gray-100 rounded-md text-sm overflow-x-auto">
+              <code>{JSON.stringify(testResponse, null, 2)}</code>
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
