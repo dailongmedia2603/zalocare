@@ -11,10 +11,10 @@ const Login = () => {
           <img
             src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2zk5n7fp_expires_30_days.png"}
             className="w-12 h-12 object-fill"
-            alt="Torse.ai logo"
+            alt="Zalo.Care logo"
           />
           <span className="text-black text-3xl font-bold">
-            Torse.ai
+            Zalo.Care
           </span>
         </div>
         <h1 className="text-4xl font-bold text-gray-800 mb-4">

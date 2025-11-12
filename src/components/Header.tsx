@@ -37,10 +37,10 @@ const Header = () => {
         <img
           src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2zk5n7fp_expires_30_days.png"}
           className="w-9 h-9 object-fill"
-          alt="Torse.ai logo"
+          alt="Zalo.Care logo"
         />
         <span className="text-black text-lg font-bold">
-          {"Torse.ai"}
+          {"Zalo.Care"}
         </span>
       </div>
       <nav className="flex items-center gap-1">
