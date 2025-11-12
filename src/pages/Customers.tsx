@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, MoreHorizontal, ArrowUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, MoreHorizontal, ArrowUpDown, Users, UserPlus, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -113,9 +113,18 @@ const Customers = () => {
       <div className="flex justify-between items-center mb-6">
         <Tabs defaultValue="all">
           <TabsList className="bg-transparent p-0 h-auto space-x-4">
-            <TabsTrigger value="all" className="text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">Tất cả</TabsTrigger>
-            <TabsTrigger value="new" className="text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">Mới</TabsTrigger>
-            <TabsTrigger value="contacted" className="text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">Đã liên hệ</TabsTrigger>
+            <TabsTrigger value="all" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
+              <Users className="w-4 h-4" />
+              Tất cả
+            </TabsTrigger>
+            <TabsTrigger value="new" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
+              <UserPlus className="w-4 h-4" />
+              Mới
+            </TabsTrigger>
+            <TabsTrigger value="contacted" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
+              <MessageSquare className="w-4 h-4" />
+              Đã liên hệ
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="flex items-center gap-2">
@@ -162,19 +171,12 @@ const Customers = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50 border-b">
-              <TableHead className="w-[180px] pl-6">
-                <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
-                  Zalo ID
-                  <ArrowUpDown className="ml-2 h-3 w-3" />
-                </Button>
-              </TableHead>
-              <TableHead>
+              <TableHead className="pl-6">
                 <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
                   Tên
                   <ArrowUpDown className="ml-2 h-3 w-3" />
                 </Button>
               </TableHead>
-              <TableHead className="font-semibold text-gray-600">Tên Zalo</TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
                   Ngày tạo
@@ -188,39 +190,40 @@ const Customers = () => {
             {isLoading ? (
               [...Array(pageSize)].map((_, i) => (
                 <TableRow key={i} className="border-b-0">
-                  <TableCell className="pl-6"><Skeleton className="h-5 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                  <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                   <TableCell className="pr-6"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-red-500 h-48">
+                <TableCell colSpan={3} className="text-center text-red-500 h-48">
                   Lỗi khi tải dữ liệu khách hàng.
                 </TableCell>
               </TableRow>
             ) : customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-gray-500 h-48">
+                <TableCell colSpan={3} className="text-center text-gray-500 h-48">
                   Không có khách hàng nào.
                 </TableCell>
               </TableRow>
             ) : (
               customers.map((customer) => (
                 <TableRow key={customer.id} className="hover:bg-gray-50">
-                  <TableCell className="font-medium text-gray-500 pl-6">{customer.zalo_id}</TableCell>
-                  <TableCell>
+                  <TableCell className="pl-6">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage src={customer.avatar_url || '/placeholder.svg'} alt={customer.display_name || 'C'} />
                         <AvatarFallback>{(customer.display_name || 'C').charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <span className="font-semibold text-gray-800">{customer.display_name || 'Chưa có tên'}</span>
+                      <div>
+                        <div className="font-semibold text-gray-800">{customer.display_name || 'Chưa có tên'}</div>
+                        {customer.zalo_name && (
+                          <div className="text-sm text-gray-500 italic">{customer.zalo_name}</div>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500">{customer.zalo_name || 'Chưa có'}</TableCell>
                   <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd MMM, yyyy")}</TableCell>
                   <TableCell className="text-right pr-6">
                     <DropdownMenu>
