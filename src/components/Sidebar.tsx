@@ -34,7 +34,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="flex flex-col items-center bg-white p-3 rounded-lg border border-solid border-[#EDEDED] w-20">
+    <aside className="flex flex-col items-center w-20">
       <div className="flex flex-col items-center self-stretch flex-grow gap-3">
         {topNavItems.map((item) => {
           const Icon = item.icon;
@@ -45,19 +45,19 @@ const Sidebar = () => {
               variant="ghost"
               size="icon"
               className={cn(
-                'w-14 h-14 rounded-lg border',
+                'w-12 h-12 rounded-lg border',
                 isActive
                   ? 'bg-gray-100 border-gray-300'
                   : 'bg-white border-gray-200 hover:bg-gray-100',
               )}
               onClick={() => handleItemClick(item.name)}
             >
-              <Icon className={cn('w-7 h-7', item.color)} />
+              <Icon className={cn('w-6 h-6', item.color)} />
             </Button>
           );
         })}
       </div>
-      <div className="flex flex-col items-center self-stretch gap-3 mt-3 pt-3 border-t border-gray-200">
+      <div className="flex flex-col items-center self-stretch gap-3 mt-3 pt-3">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.name;
@@ -67,14 +67,14 @@ const Sidebar = () => {
               variant="ghost"
               size="icon"
               className={cn(
-                'w-14 h-14 rounded-lg border',
+                'w-12 h-12 rounded-lg border',
                  isActive
                   ? 'bg-gray-100 border-gray-300'
                   : 'bg-white border-gray-200 hover:bg-gray-100',
               )}
               onClick={() => handleItemClick(item.name)}
             >
-              <Icon className="w-7 h-7 text-gray-700" />
+              <Icon className="w-6 h-6 text-gray-700" />
             </Button>
           );
         })}
