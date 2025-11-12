@@ -44,17 +44,29 @@ interface Customer {
   created_at: string;
 }
 
-// Hook to fetch customers with pagination
-const useCustomers = (page: number, pageSize: number) => {
+// Hook to fetch customers with pagination and filtering
+const useCustomers = (page: number, pageSize: number, dateRange?: DateRange) => {
   return useQuery<{ customers: Customer[], count: number }, Error>({
-    queryKey: ['customers', page, pageSize],
+    queryKey: ['customers', page, pageSize, dateRange],
     queryFn: async () => {
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
 
-      const { data, error, count } = await supabase
+      let query = supabase
         .from('customers')
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'exact' });
+
+      // Apply date filters
+      if (dateRange?.from) {
+        query = query.gte('created_at', dateRange.from.toISOString());
+      }
+      if (dateRange?.to) {
+        const toDate = new Date(dateRange.to);
+        toDate.setHours(23, 59, 59, 999); // Include the entire 'to' day
+        query = query.lte('created_at', toDate.toISOString());
+      }
+
+      const { data, error, count } = await query
         .order('created_at', { ascending: false })
         .range(from, to);
 
@@ -72,9 +84,14 @@ const Customers = () => {
   const queryClient = useQueryClient();
   const [date, setDate] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
-  const pageSize = 7; // Number of items per page, similar to the image
+  const pageSize = 7;
 
-  const { data, isLoading, isError } = useCustomers(page, pageSize);
+  const { data, isLoading, isError } = useCustomers(page, pageSize, date);
+
+  // Reset to page 1 when date filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [date]);
 
   // Real-time subscription for the customers table
   useEffect(() => {
@@ -84,13 +101,11 @@ const Customers = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'customers' },
         () => {
-          // Invalidate the query to trigger a refetch
           queryClient.invalidateQueries({ queryKey: ['customers'] });
         }
       )
       .subscribe();
 
-    // Cleanup subscription on component unmount
     return () => {
       supabase.removeChannel(channel);
     };
@@ -107,7 +122,6 @@ const Customers = () => {
   };
 
   const renderPagination = () => {
-    // Simplified pagination logic for brevity
     if (totalPages <= 1) return null;
     
     return (
@@ -245,7 +259,7 @@ const Customers = () => {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd MMM, yyyy")}</TableCell>
+                  <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd/MM/yyyy")}</TableCell>
                   <TableCell className="text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
