@@ -5,9 +5,19 @@ import {
   Tag,
   BarChart3,
   Files,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavLink } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navItems = [
   { name: 'Chat', icon: MessageSquare, path: '/' },
@@ -17,6 +27,10 @@ const navItems = [
 ];
 
 const Header = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
   return (
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
       <div className="flex items-center w-auto mr-6 gap-3">
@@ -36,7 +50,7 @@ const Header = () => {
             <NavLink
               key={item.name}
               to={item.path}
-              end // Important for the root path to not match all other paths
+              end
               className={({ isActive }) =>
                 cn(
                   'flex items-center py-2 px-3 gap-2 transition-colors border-b-2',
@@ -73,7 +87,22 @@ const Header = () => {
         <button className="flex items-center justify-center w-9 h-9 rounded-md border hover:bg-gray-100">
             <Files className="w-5 h-5 text-gray-600" />
         </button>
-        <div className="w-9 h-9 rounded-md bg-gray-200"></div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-9 w-9 rounded-full">
+              <Avatar className="h-9 w-9">
+                <AvatarImage src="/placeholder.svg" alt="Avatar" />
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Đăng xuất</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
