@@ -3,13 +3,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, MessageSquare, Mail, Inbox } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Conversation } from '@/data/mock-chat-data';
 import ConversationItem from './ConversationItem';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
+import { ConversationInboxItem } from '@/types/chat';
 
 interface InboxPanelProps {
-  conversations: Conversation[];
+  conversations: ConversationInboxItem[];
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
 }
@@ -17,12 +17,12 @@ interface InboxPanelProps {
 const InboxPanel = ({ conversations, selectedConversationId, onSelectConversation }: InboxPanelProps) => {
   const [filter, setFilter] = useState('all');
 
-  const unreadCount = conversations.filter(c => c.unreadCount > 0).length;
+  const unreadCount = conversations.filter(c => c.unread_count > 0).length;
   const allCount = conversations.length;
 
   const filteredConversations = conversations.filter(conv => {
     if (filter === 'unread') {
-      return conv.unreadCount > 0;
+      return conv.unread_count > 0;
     }
     return true;
   });

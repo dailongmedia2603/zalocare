@@ -1,12 +1,14 @@
 import { cn } from '@/lib/utils';
-import { Message } from '@/data/mock-chat-data';
+import { ZaloMessage } from '@/types/chat';
 
 interface MessageBubbleProps {
-  message: Message;
+  message: ZaloMessage;
+  customerZaloId: string;
 }
 
-const MessageBubble = ({ message }: MessageBubbleProps) => {
-  const isMe = message.sender === 'me';
+const MessageBubble = ({ message, customerZaloId }: MessageBubbleProps) => {
+  // A message is "from me" if the sender is NOT the customer
+  const isMe = message.sender_zalo_id !== customerZaloId;
 
   return (
     <div className={cn('flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>
@@ -18,7 +20,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             : 'bg-white border rounded-bl-none'
         )}
       >
-        <p className="text-sm">{message.text}</p>
+        <p className="text-sm">{message.content}</p>
       </div>
     </div>
   );

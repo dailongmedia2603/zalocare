@@ -1,37 +1,32 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Conversation } from '@/data/mock-chat-data';
+import { ConversationInboxItem } from '@/types/chat';
 import { Mail, Phone, PlusCircle } from 'lucide-react';
 
 interface CustomerInfoPanelProps {
-  conversation: Conversation | null;
+  conversation: ConversationInboxItem | null;
 }
 
 const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
-  if (!conversation) {
+  if (!conversation || !conversation.customer) {
     return <div className="w-[360px] border-l bg-gray-50"></div>;
   }
 
   const { customer } = conversation;
+  const customerName = customer.display_name || 'Unknown User';
 
   return (
     <div className="w-[360px] border-l flex flex-col">
       <div className="p-4 text-center border-b">
         <Avatar className="w-20 h-20 mx-auto">
-          <AvatarImage src={customer.avatarUrl} />
-          <AvatarFallback>{customer.name.charAt(0)}</AvatarFallback>
+          <AvatarImage src={customer.avatar_url || '/placeholder.svg'} />
+          <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
-        <h3 className="mt-3 font-bold text-lg">{customer.name}</h3>
-        <div className="flex items-center justify-center gap-1.5 mt-1">
-          <div className={`w-2 h-2 rounded-full ${customer.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
-          <span className="text-sm text-gray-500">{customer.isOnline ? 'Online' : 'Offline'}</span>
-        </div>
+        <h3 className="mt-3 font-bold text-lg">{customerName}</h3>
+        {/* Online status can be added later */}
       </div>
       <div className="p-4 space-y-4 flex-1 overflow-y-auto">
         <div>
@@ -39,11 +34,13 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           <div className="space-y-2 text-sm">
             <div className="flex items-center gap-2 text-gray-700">
               <Mail className="w-4 h-4 text-gray-400" />
-              <span>{customer.email}</span>
+              {/* Email can be added to customer table later */}
+              <span>Chưa có email</span>
             </div>
             <div className="flex items-center gap-2 text-gray-700">
               <Phone className="w-4 h-4 text-gray-400" />
-              <span>{customer.phone}</span>
+              {/* Phone can be added to customer table later */}
+              <span>Chưa có SĐT</span>
             </div>
           </div>
         </div>
@@ -57,9 +54,8 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {customer.tags.map(tag => (
-              <Badge key={tag} variant="secondary">{tag}</Badge>
-            ))}
+            {/* Tags can be implemented later */}
+            <Badge variant="secondary">Customer</Badge>
           </div>
         </div>
         <Separator />
