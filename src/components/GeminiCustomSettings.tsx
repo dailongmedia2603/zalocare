@@ -82,11 +82,12 @@ const GeminiCustomSettings = () => {
         showSuccess('Kết nối thành công!');
         setConnectionStatus('success');
       } else {
-        showError(`Kết nối thất bại: ${data.message || 'Lỗi không xác định'}`);
+        const errorMessage = data.details ? `${data.message}: ${data.details}` : data.message || 'Lỗi không xác định';
+        showError(`Kết nối thất bại: ${errorMessage}`);
         setConnectionStatus('error');
       }
     } catch (error: any) {
-      showError('Kết nối thất bại. Vui lòng kiểm tra lại URL.');
+      showError(`Lỗi khi kiểm tra kết nối: ${error.message || 'Vui lòng kiểm tra lại URL.'}`);
       setConnectionStatus('error');
       console.error('Function Invoke Error:', error);
     } finally {
@@ -113,10 +114,15 @@ const GeminiCustomSettings = () => {
       if (error) {
         throw error;
       }
+      
+      if (data.success === false) {
+        const errorMessage = data.details ? `${data.message}: ${data.details}` : data.message || 'Lỗi không xác định';
+        showError(`Gửi yêu cầu thất bại: ${errorMessage}`);
+      }
 
       setTestResponse(data);
     } catch (error: any) {
-      showError('Gửi yêu cầu thất bại.');
+      showError(`Lỗi khi gửi yêu cầu: ${error.message || 'Vui lòng kiểm tra lại.'}`);
       setTestResponse({ error: 'Gửi yêu cầu thất bại.', details: error.message });
       console.error('Prompt Test Error:', error);
     } finally {
