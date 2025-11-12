@@ -118,17 +118,17 @@ export const useChatSubscription = () => {
 
     useEffect(() => {
         const channel = supabase
-            .channel('zalo-chat-changes-*') // Sử dụng wildcard để đảm bảo kênh là duy nhất
+            .channel('realtime-chat-and-customers')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'zalo_events' },
                 (payload) => {
                     const newMessage = payload.new as any;
 
-                    // 1. Tải lại danh sách cuộc trò chuyện để cập nhật hộp thư
+                    // 1. Invalidate conversations to update inbox preview and order
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-                    // 2. Cập nhật trực tiếp tin nhắn cho cuộc trò chuyện đang mở
+                    // 2. Optimistically update messages for the currently open conversation
                     queryClient.setQueryData(
                         ['messages', newMessage.threadId], 
                         (oldData: ZaloMessage[] | undefined) => {
@@ -141,12 +141,10 @@ export const useChatSubscription = () => {
                                 sender_zalo_id: newMessage.uidFrom,
                             };
 
-                            // Nếu chưa có dữ liệu cũ, tạo mới với tin nhắn này
                             if (!oldData) {
                                 return [formattedMessage];
                             }
 
-                            // Tránh thêm tin nhắn trùng lặp
                             if (oldData.some(msg => msg.id === newMessage.id)) {
                                 return oldData;
                             }
@@ -154,6 +152,15 @@ export const useChatSubscription = () => {
                             return [...oldData, formattedMessage];
                         }
                     );
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'customers' },
+                (_payload) => {
+                    // When customer data changes (e.g., avatar or name updated),
+                    // invalidate the conversations query to refetch and display the new data.
+                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
             .subscribe();
