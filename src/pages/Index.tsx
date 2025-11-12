@@ -8,7 +8,7 @@ const Index = () => {
     <div className="bg-[#F6F8FA] min-h-screen flex flex-col">
       <div className="w-full flex flex-col flex-1">
         <Header />
-        <main className="flex flex-1 items-stretch my-3 mx-3 gap-3">
+        <main className="flex flex-1 items-stretch my-3 mx-2 gap-2">
           <Sidebar />
           <div className="flex items-start bg-white flex-1 rounded-lg border border-solid border-[#EDEDED]">
             <AIPanel />
