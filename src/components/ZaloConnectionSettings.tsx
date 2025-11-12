@@ -84,14 +84,16 @@ const ZaloConnectionSettings = () => {
         </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="zalo-oa-id">Zalo OA ID</Label>
+        <Label htmlFor="zalo-oa-id">Zalo Official Account ID (chính là `idTo`)</Label>
         <Input
           id="zalo-oa-id"
           value={zaloOaId}
           onChange={(e) => setZaloOaId(e.target.value)}
-          placeholder="Nhập ID của Zalo Official Account..."
+          placeholder="Dán giá trị 'idTo' từ dữ liệu Zalo vào đây..."
         />
-        <p className="text-xs text-gray-400">Bạn có thể tìm thấy ID này trong trang quản trị Zalo OA của bạn.</p>
+        <p className="text-xs text-gray-400">
+          Trong dữ liệu Zalo gửi về, đây là trường `idTo`. Ví dụ: `2004783934612118076`.
+        </p>
       </div>
       <Button onClick={handleSave} disabled={isSaving || !zaloOaId}>
         {isSaving ? (
