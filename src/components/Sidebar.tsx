@@ -37,10 +37,10 @@ const bottomNavItems = [
 
 const Sidebar = () => {
   return (
-    <aside className="flex flex-col items-center w-16">
+    <aside className="flex flex-col items-center w-8">
       <img
         src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/kdt844vf_expires_30_days.png"}
-        className="w-[15px] h-[1px] my-3 object-fill"
+        className="w-[15px] h-[1px] mb-3 object-fill"
         alt="divider"
       />
       <div className="flex flex-col items-center self-stretch flex-grow gap-3">
@@ -49,23 +49,23 @@ const Sidebar = () => {
           
           if (!item.path) {
             return (
-              <div key={index} className="flex items-center justify-center w-full h-12">
-                <Icon className="w-6 h-6 text-gray-600" />
+              <div key={index} className="flex items-center justify-center w-8 h-8">
+                <Icon className="w-5 h-5 text-gray-600" />
               </div>
             );
           }
 
           const navLinkContent = ({ isActive }: { isActive: boolean }) => (
             <div className={cn(
-              "flex items-center justify-center w-full h-12",
-              isActive && "bg-white border-l-4 border-orange-500 rounded-l-lg"
+              "flex items-center justify-center w-8 h-8 rounded-lg",
+              isActive && "bg-white border border-blue-200 shadow-sm"
             )}>
-              <Icon className={cn("w-6 h-6", isActive ? "text-orange-500" : "text-gray-600")} />
+              <Icon className={cn("w-5 h-5", isActive ? "text-orange-500" : "text-gray-600")} />
             </div>
           );
 
           const navLink = (
-            <NavLink to={item.path} className="w-full">
+            <NavLink to={item.path}>
               {({ isActive }) => navLinkContent({ isActive })}
             </NavLink>
           );
@@ -88,8 +88,8 @@ const Sidebar = () => {
       </div>
       <div className="flex flex-col items-center self-stretch gap-3 mt-4">
         {bottomNavItems.map(({ Icon }, index) => (
-           <div key={index} className="flex items-center justify-center w-full h-12">
-             <Icon className="w-6 h-6 text-gray-600" />
+           <div key={index} className="flex items-center justify-center w-8 h-8">
+             <Icon className="w-5 h-5 text-gray-600" />
            </div>
         ))}
       </div>
