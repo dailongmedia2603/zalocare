@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { IconPicker } from "@/components/tags/IconPicker";
 import { Tag } from "@/pages/Tags";
 
 const PRESET_COLORS = [
@@ -47,14 +46,13 @@ const PRESET_COLORS = [
 const formSchema = z.object({
   name: z.string().min(1, "Tên tag không được để trống."),
   color: z.string().min(1, "Vui lòng chọn một màu."),
-  icon: z.string().min(1, "Vui lòng chọn một biểu tượng."),
 });
 
 type TagFormValues = z.infer<typeof formSchema>;
 
 interface TagFormProps {
   tag?: Tag | null;
-  onSubmit: (values: TagFormValues) => void;
+  onSubmit: (values: Omit<Tag, 'id'>) => void;
   onClose: () => void;
   isPending: boolean;
 }
@@ -65,11 +63,15 @@ export const TagForm = ({ tag, onSubmit, onClose, isPending }: TagFormProps) => 
     defaultValues: {
       name: tag?.name || "",
       color: tag?.color || "bg-gray-500",
-      icon: tag?.icon || "Tag",
     },
   });
 
   const isEditing = !!tag;
+
+  const handleFormSubmit = (values: TagFormValues) => {
+    // Always use 'Tag' as the icon
+    onSubmit({ name: values.name, color: values.color, icon: 'Tag' });
+  };
 
   return (
     <DialogContent>
@@ -80,7 +82,7 @@ export const TagForm = ({ tag, onSubmit, onClose, isPending }: TagFormProps) => 
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-6">
           <FormField
             control={form.control}
             name="name"
@@ -89,19 +91,6 @@ export const TagForm = ({ tag, onSubmit, onClose, isPending }: TagFormProps) => 
                 <FormLabel>Tên Tag</FormLabel>
                 <FormControl>
                   <Input placeholder="Ví dụ: Khách hàng tiềm năng" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="icon"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Biểu tượng</FormLabel>
-                <FormControl>
-                  <IconPicker value={field.value} onChange={field.onChange} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
