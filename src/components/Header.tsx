@@ -1,35 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Users,
   MessageSquare,
-  Lightbulb,
-  TrendingUp,
-  CloudCog,
-  Repeat,
-  ClipboardList,
+  Tag,
+  BarChart3,
   Files,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { showSuccess } from '@/utils/toast';
+import { NavLink } from 'react-router-dom';
 
 const navItems = [
-  { name: 'Contacts', icon: Users },
-  { name: 'Conversations', icon: MessageSquare },
-  { name: 'Marketing', icon: Lightbulb },
-  { name: 'Sales', icon: TrendingUp },
-  { name: 'Services', icon: CloudCog },
-  { name: 'Automation', icon: Repeat },
-  { name: 'Reporting', icon: ClipboardList },
+  { name: 'Chat', icon: MessageSquare, path: '/' },
+  { name: 'Khách hàng', icon: Users, path: '/customers' },
+  { name: 'Tag', icon: Tag, path: '/tags' },
+  { name: 'Báo cáo', icon: BarChart3, path: '/reports' },
 ];
 
 const Header = () => {
-  const [activeItem, setActiveItem] = useState('Sales');
-
-  const handleItemClick = (name: string) => {
-    setActiveItem(name);
-    showSuccess(`Navigated to ${name}`);
-  };
-
   return (
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
       <div className="flex items-center w-auto mr-6 gap-3">
@@ -45,24 +32,36 @@ const Header = () => {
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeItem === item.name;
           return (
-            <button
+            <NavLink
               key={item.name}
-              onClick={() => handleItemClick(item.name)}
-              className="flex items-center py-2 px-3 gap-2 rounded-md hover:bg-gray-100 transition-colors"
+              to={item.path}
+              end // Important for the root path to not match all other paths
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center py-2 px-3 gap-2 rounded-md hover:bg-gray-100 transition-colors'
+                )
+              }
             >
-              <Icon className={cn(
-                'w-5 h-5',
-                isActive ? 'text-orange-500' : 'text-[#4E657F]'
-              )} />
-              <span className={cn(
-                'text-sm',
-                isActive ? "text-black font-bold" : "text-[#4E657F]"
-              )}>
-                {item.name}
-              </span>
-            </button>
+              {({ isActive }) => (
+                <>
+                  <Icon
+                    className={cn(
+                      'w-5 h-5',
+                      isActive ? 'text-orange-500' : 'text-[#4E657F]'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-sm',
+                      isActive ? 'text-black font-bold' : 'text-[#4E657F]'
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                </>
+              )}
+            </NavLink>
           );
         })}
       </nav>

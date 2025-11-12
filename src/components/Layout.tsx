@@ -1,9 +1,8 @@
 import Header from '@/components/Header';
 import Sidebar from '@/components/Sidebar';
-import AIPanel from '@/components/AIPanel';
-import ContentPanel from '@/components/ContentPanel';
+import { Outlet } from 'react-router-dom';
 
-const Index = () => {
+const Layout = () => {
   return (
     <div className="bg-[#F6F8FA] min-h-screen flex flex-col">
       <div className="w-full flex flex-col flex-1">
@@ -11,8 +10,7 @@ const Index = () => {
         <main className="flex flex-1 items-stretch my-3 mx-2 gap-2">
           <Sidebar />
           <div className="flex items-start bg-white flex-1 rounded-lg border border-solid border-[#EDEDED]">
-            <AIPanel />
-            <ContentPanel />
+            <Outlet />
           </div>
         </main>
       </div>
@@ -20,4 +18,4 @@ const Index = () => {
   );
 };
 
-export default Index;
+export default Layout;
