@@ -1,5 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bot, Webhook } from "lucide-react";
+import GeminiCustomSettings from "@/components/GeminiCustomSettings";
 
 const Settings = () => {
   return (
@@ -15,7 +16,7 @@ const Settings = () => {
               <Bot className="w-5 h-5 text-white" />
             </div>
             <span className="font-semibold text-gray-700">
-              API Gemini Vertex AI
+              API Gemini Custom
             </span>
           </TabsTrigger>
           <TabsTrigger
@@ -32,10 +33,7 @@ const Settings = () => {
         </TabsList>
         <TabsContent value="gemini" className="mt-6">
           <div className="p-6 border rounded-lg bg-white">
-            <h3 className="text-lg font-semibold mb-4">Cấu hình API Gemini Vertex AI</h3>
-            <p className="text-gray-500">
-              Nội dung cấu hình cho API Gemini Vertex AI sẽ được hiển thị ở đây.
-            </p>
+            <GeminiCustomSettings />
           </div>
         </TabsContent>
         <TabsContent value="webhook" className="mt-6">
