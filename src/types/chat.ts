@@ -27,3 +27,12 @@ export type ConversationInboxItem = {
   customer: ZaloCustomer | null; // Customer can be null if not yet created in the customers table
   tags: Tag[];
 };
+
+// Represents a single note for a customer
+export interface CustomerNote {
+  id: string;
+  customer_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+}

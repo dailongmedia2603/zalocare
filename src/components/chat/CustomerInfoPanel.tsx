@@ -3,8 +3,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { ConversationInboxItem } from '@/types/chat';
-import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon } from 'lucide-react';
+import { ConversationInboxItem, CustomerNote } from '@/types/chat';
+import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon, Notebook } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tag } from '@/pages/Tags';
@@ -24,6 +24,8 @@ import {
 import { useState } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import NoteItem from './NoteItem';
+import { Skeleton } from '../ui/skeleton';
 
 // Fetch all available tags for the user
 const useAvailableTags = () => {
@@ -37,6 +39,24 @@ const useAvailableTags = () => {
   });
 };
 
+// Fetch notes for a specific customer
+const useNotes = (customerId: string | null) => {
+  return useQuery<CustomerNote[]>({
+    queryKey: ['notes', customerId],
+    queryFn: async () => {
+      if (!customerId) return [];
+      const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    enabled: !!customerId,
+  });
+};
+
 interface CustomerInfoPanelProps {
   conversation: ConversationInboxItem | null;
 }
@@ -44,9 +64,12 @@ interface CustomerInfoPanelProps {
 const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
   const queryClient = useQueryClient();
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [newNote, setNewNote] = useState('');
   const { data: availableTags, isLoading: isLoadingTags } = useAvailableTags();
 
   const customerId = conversation?.customer?.id;
+
+  const { data: notes, isLoading: isLoadingNotes } = useNotes(customerId || null);
 
   const addTagMutation = useMutation({
     mutationFn: async (tagId: string) => {
@@ -82,11 +105,38 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
     onError: (error) => showError(error.message),
   });
 
+  const addNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !customerId) throw new Error("User or customer not found");
+      const { error } = await supabase.from('notes').insert({
+        customer_id: customerId,
+        user_id: user.id,
+        content: content,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+      setNewNote('');
+      showSuccess("Đã thêm ghi chú!");
+    },
+    onError: (error) => showError(error.message),
+  });
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (newNote.trim()) {
+        addNoteMutation.mutate(newNote.trim());
+      }
+    }
+  };
+
   if (!conversation) {
     return <div className="w-[360px] border-l bg-gray-50"></div>;
   }
 
-  // Handle case where customer record might not exist yet
   if (!conversation.customer) {
     return (
       <div className="w-[360px] border-l flex flex-col items-center justify-center p-4 text-center">
@@ -102,13 +152,12 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
 
   const { customer, tags: assignedTags } = conversation;
   const customerName = customer.display_name || 'Unknown User';
-
   const unassignedTags = availableTags?.filter(
     (at) => !assignedTags.some((st) => st.id === at.id)
   );
 
   return (
-    <div className="w-[360px] border-l flex flex-col">
+    <div className="w-[360px] border-l flex flex-col h-full bg-white">
       <div className="p-4 text-center border-b">
         <Avatar className="w-20 h-20 mx-auto">
           <AvatarImage src={customer.avatar_url || '/placeholder.svg'} />
@@ -116,7 +165,8 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
         </Avatar>
         <h3 className="mt-3 font-bold text-lg">{customerName}</h3>
       </div>
-      <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div>
           <h4 className="text-sm font-semibold text-gray-600 mb-2">Thông tin liên hệ</h4>
           <div className="space-y-2 text-sm">
@@ -184,7 +234,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             {assignedTags.map((tag) => {
               const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
               return (
-                <Badge key={tag.id} variant="secondary" className={cn("py-1 pl-2 pr-1 gap-1.5", tag.color, "text-white")}>
+                <Badge key={tag.id} className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", tag.color, "text-white")}>
                   <Icon className="w-3 h-3" />
                   {tag.name}
                   <button
@@ -201,9 +251,34 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
         </div>
         <Separator />
         <div>
-          <h4 className="text-sm font-semibold text-gray-600 mb-2">Ghi chú</h4>
-          <Textarea placeholder="Thêm ghi chú về khách hàng..." rows={5} />
+          <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3">
+            <Notebook className="w-4 h-4" />
+            Ghi chú
+          </h4>
+          <div className="space-y-4">
+            {isLoadingNotes ? (
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-4/5" />
+              </div>
+            ) : notes && notes.length > 0 ? (
+              notes.map((note) => <NoteItem key={note.id} note={note} />)
+            ) : (
+              <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>
+            )}
+          </div>
         </div>
+      </div>
+
+      <div className="p-4 border-t bg-white">
+        <Textarea
+          placeholder="Thêm ghi chú... (Enter để gửi)"
+          rows={2}
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          onKeyDown={handleNoteKeyDown}
+          disabled={addNoteMutation.isPending}
+        />
       </div>
     </div>
   );

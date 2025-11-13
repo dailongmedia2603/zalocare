@@ -153,6 +153,18 @@ export const useChatSubscription = () => {
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'notes' },
+                (payload: any) => {
+                    const customerId = payload.new?.customer_id || payload.old?.customer_id;
+                    if (customerId) {
+                        queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+                    } else {
+                        queryClient.invalidateQueries({ queryKey: ['notes'] });
+                    }
+                }
+            )
             .subscribe();
 
         // Cleanup function to remove the subscription when the component unmounts
