@@ -26,6 +26,16 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import NoteItem from './NoteItem';
 import { Skeleton } from '../ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Fetch all available tags for the user
 const useAvailableTags = () => {
@@ -65,6 +75,8 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
   const queryClient = useQueryClient();
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
   const [newNote, setNewNote] = useState('');
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<CustomerNote | null>(null);
   const { data: availableTags, isLoading: isLoadingTags } = useAvailableTags();
 
   const customerId = conversation?.customer?.id;
@@ -124,6 +136,35 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
     onError: (error) => showError(error.message),
   });
 
+  const updateNoteMutation = useMutation({
+    mutationFn: async ({ noteId, content }: { noteId: string, content: string }) => {
+      const { error } = await supabase
+        .from('notes')
+        .update({ content, updated_at: new Date().toISOString() })
+        .eq('id', noteId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+      showSuccess("Đã cập nhật ghi chú!");
+    },
+    onError: (error) => showError(`Lỗi: ${error.message}`),
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      const { error } = await supabase.from('notes').delete().eq('id', noteId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+      showSuccess("Đã xóa ghi chú!");
+      setIsDeleteConfirmOpen(false);
+      setNoteToDelete(null);
+    },
+    onError: (error) => showError(`Lỗi: ${error.message}`),
+  });
+
   const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -131,6 +172,15 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
         addNoteMutation.mutate(newNote.trim());
       }
     }
+  };
+
+  const handleUpdateNote = async (noteId: string, content: string) => {
+    await updateNoteMutation.mutateAsync({ noteId, content });
+  };
+
+  const handleDeleteNoteClick = (note: CustomerNote) => {
+    setNoteToDelete(note);
+    setIsDeleteConfirmOpen(true);
   };
 
   if (!conversation) {
@@ -255,14 +305,24 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             <Notebook className="w-4 h-4" />
             Ghi chú
           </h4>
-          <div className="space-y-4">
+          <div className="space-y-2">
             {isLoadingNotes ? (
               <div className="space-y-3">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-4/5" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-4/5" />
               </div>
             ) : notes && notes.length > 0 ? (
-              notes.map((note) => <NoteItem key={note.id} note={note} />)
+              notes.map((note, index) => (
+                <div key={note.id} className="group">
+                  <NoteItem
+                    note={note}
+                    isNewest={index === 0}
+                    onUpdate={handleUpdateNote}
+                    onDelete={handleDeleteNoteClick}
+                    isUpdating={updateNoteMutation.isPending && updateNoteMutation.variables?.noteId === note.id}
+                  />
+                </div>
+              ))
             ) : (
               <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>
             )}
@@ -280,6 +340,27 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           disabled={addNoteMutation.isPending}
         />
       </div>
+      
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Ghi chú sẽ bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setNoteToDelete(null)}>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => noteToDelete && deleteNoteMutation.mutate(noteToDelete.id)}
+              disabled={deleteNoteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
