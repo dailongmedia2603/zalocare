@@ -53,16 +53,20 @@ serve(async (req) => {
       })
     }
 
-    // Construct the payload for n8n with a consistent structure
-    const payload = {
+    // Construct the base payload
+    const payload: any = {
       threadId: threadId,
       type: 'user',
       message: message || '',
-      attachments: {
-        type: 'image_url',
-        image_url: imageUrl || '', // Always send image_url, even if it's an empty string
-      },
     };
+
+    // Only add the attachments object if an imageUrl is provided and not empty
+    if (imageUrl) {
+      payload.attachments = {
+        type: 'image_url',
+        image_url: imageUrl,
+      };
+    }
 
     const n8nResponse = await fetch(settings.n8n_webhook_url, {
       method: 'POST',
