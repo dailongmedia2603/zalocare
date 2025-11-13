@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { ConversationInboxItem, ZaloMessage } from '@/types/chat';
-import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Fetch all conversations for the inbox view, starting from events
 export const useConversations = () => {
@@ -124,7 +123,7 @@ export const useChatSubscription = () => {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'zalo_events' },
-                (payload: RealtimePostgresChangesPayload<any>) => {
+                (payload: any) => {
                     // Invalidate the main conversations list to update previews, order, etc.
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
 

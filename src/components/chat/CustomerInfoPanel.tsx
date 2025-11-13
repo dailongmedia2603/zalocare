@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ConversationInboxItem } from '@/types/chat';
-import { Mail, Phone, PlusCircle, X, Loader2, icons } from 'lucide-react';
+import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tag } from '@/pages/Tags';
@@ -132,7 +132,54 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
         </div>
         <Separator />
         <div>
-          <h4 className="text-sm font-semibold text-gray-600 mb-2">Tags</h4>
+          <div className="flex justify-between items-center mb-2">
+            <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+              <TagIcon className="w-4 h-4" />
+              Tags
+            </h4>
+            <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="justify-start text-muted-foreground">
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Thêm tag...
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0 w-[220px]" align="start">
+                <Command>
+                  <CommandInput placeholder="Tìm kiếm tag..." />
+                  <CommandList>
+                    <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
+                    <CommandGroup>
+                      {isLoadingTags ? (
+                        <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                      ) : (
+                        unassignedTags?.map((tag) => {
+                          const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
+                          return (
+                            <CommandItem
+                              key={tag.id}
+                              onSelect={() => {
+                                addTagMutation.mutate(tag.id);
+                                setIsTagPopoverOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
+                                  <Icon className="w-3 h-3" />
+                                </div>
+                                <span>{tag.name}</span>
+                              </div>
+                            </CommandItem>
+                          );
+                        })
+                      )}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="flex flex-wrap gap-2">
             {assignedTags.map((tag) => {
               const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
@@ -151,48 +198,6 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
               );
             })}
           </div>
-          <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full justify-start text-muted-foreground mt-2">
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Thêm tag...
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-0 w-[220px]" align="start">
-              <Command>
-                <CommandInput placeholder="Tìm kiếm tag..." />
-                <CommandList>
-                  <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
-                  <CommandGroup>
-                    {isLoadingTags ? (
-                      <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
-                    ) : (
-                      unassignedTags?.map((tag) => {
-                        const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-                        return (
-                          <CommandItem
-                            key={tag.id}
-                            onSelect={() => {
-                              addTagMutation.mutate(tag.id);
-                              setIsTagPopoverOpen(false);
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
-                                <Icon className="w-3 h-3" />
-                              </div>
-                              <span>{tag.name}</span>
-                            </div>
-                          </CommandItem>
-                        );
-                      })
-                    )}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
         </div>
         <Separator />
         <div>
