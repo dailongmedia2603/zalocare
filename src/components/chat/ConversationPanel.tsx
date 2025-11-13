@@ -10,8 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Label } from '@/components/ui/label';
+import ImageSelectorDialog from './ImageSelectorDialog';
 
 interface ConversationPanelProps {
   conversation: ConversationInboxItem | null;
@@ -22,7 +21,7 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [message, setMessage] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
+  const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ newMessage, newImageUrl }: { newMessage: string, newImageUrl: string }) => {
@@ -50,7 +49,6 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
       showSuccess("Tin nhắn đã được gửi!");
       setMessage('');
       setImageUrl('');
-      setIsAttachmentOpen(false);
     },
     onError: (error: Error) => {
       if (error.message.includes('N8N webhook URL not configured')) {
@@ -65,6 +63,11 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
     if (message.trim() || imageUrl.trim()) {
       sendMessageMutation.mutate({ newMessage: message.trim(), newImageUrl: imageUrl.trim() });
     }
+  };
+
+  const handleSelectImage = (url: string) => {
+    setImageUrl(url);
+    setIsImageSelectorOpen(false);
   };
 
   useEffect(() => {
@@ -85,99 +88,83 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   const avatarUrl = conversation.customer?.avatar_url;
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex items-center justify-between p-3 border-b">
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarImage src={avatarUrl || '/placeholder.svg'} />
-            <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-bold">{customerName}</h3>
+    <>
+      <div className="flex-1 flex flex-col">
+        <div className="flex items-center justify-between p-3 border-b">
+          <div className="flex items-center gap-3">
+            <Avatar>
+              <AvatarImage src={avatarUrl || '/placeholder.svg'} />
+              <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-bold">{customerName}</h3>
+            </div>
           </div>
         </div>
-      </div>
-      <ScrollArea className="flex-1 bg-gray-50/50" ref={scrollAreaRef}>
-        <div className="p-4 space-y-4">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-full">
-              <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+        <ScrollArea className="flex-1 bg-gray-50/50" ref={scrollAreaRef}>
+          <div className="p-4 space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+              </div>
+            ) : (
+              messages?.map((msg) => (
+                <MessageBubble key={msg.id} message={msg} />
+              ))
+            )}
+          </div>
+        </ScrollArea>
+        <div className="p-4 border-t bg-white">
+          {imageUrl && (
+            <div className="relative w-24 h-24 mb-2">
+              <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-md" />
+              <Button
+                variant="destructive"
+                size="icon"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                onClick={() => setImageUrl('')}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          ) : (
-            messages?.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
-            ))
           )}
-        </div>
-      </ScrollArea>
-      <div className="p-4 border-t bg-white">
-        {imageUrl && (
-          <div className="relative w-24 h-24 mb-2">
-            <img src={imageUrl} alt="Preview" className="w-full h-full object-cover rounded-md" />
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => setIsImageSelectorOpen(true)}>
+              <Paperclip className="w-5 h-5 text-gray-500" />
+            </Button>
+            <Input
+              placeholder="Nhập tin nhắn..."
+              className="flex-1"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={sendMessageMutation.isPending}
+            />
             <Button
-              variant="destructive"
-              size="icon"
-              className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-              onClick={() => setImageUrl('')}
+              className="bg-orange-500 hover:bg-orange-600"
+              onClick={handleSendMessage}
+              disabled={sendMessageMutation.isPending || (!message.trim() && !imageUrl.trim())}
             >
-              <X className="h-4 w-4" />
+              {sendMessageMutation.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <SendHorizonal className="w-5 h-5" />
+              )}
             </Button>
           </div>
-        )}
-        <div className="flex items-center gap-3">
-          <Popover open={isAttachmentOpen} onOpenChange={setIsAttachmentOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Paperclip className="w-5 h-5 text-gray-500" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="grid gap-4">
-                <div className="space-y-2">
-                  <h4 className="font-medium leading-none">Đính kèm ảnh</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Dán URL hình ảnh để gửi.
-                  </p>
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="image-url">Image URL</Label>
-                  <Input
-                    id="image-url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://example.com/image.png"
-                  />
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <Input
-            placeholder="Nhập tin nhắn..."
-            className="flex-1"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            disabled={sendMessageMutation.isPending}
-          />
-          <Button
-            className="bg-orange-500 hover:bg-orange-600"
-            onClick={handleSendMessage}
-            disabled={sendMessageMutation.isPending || (!message.trim() && !imageUrl.trim())}
-          >
-            {sendMessageMutation.isPending ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <SendHorizonal className="w-5 h-5" />
-            )}
-          </Button>
         </div>
       </div>
-    </div>
+      <ImageSelectorDialog
+        open={isImageSelectorOpen}
+        onOpenChange={setIsImageSelectorOpen}
+        onSelectImage={handleSelectImage}
+      />
+    </>
   );
 };
 

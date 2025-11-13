@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import Login from './pages/Login';
 import { supabase } from './integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
+import MediaLibrary from './pages/MediaLibrary';
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => {
                 <Route path="/" element={<Chat />} />
                 <Route path="/customers" element={<Customers />} />
                 <Route path="/tags" element={<Tags />} />
+                <Route path="/media-library" element={<MediaLibrary />} />
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/prompt-config" element={<PromptConfig />} />
                 <Route path="/settings" element={<Settings />} />

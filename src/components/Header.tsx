@@ -6,6 +6,7 @@ import {
   BarChart3,
   Files,
   LogOut,
+  Library,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavLink } from 'react-router-dom';
@@ -23,6 +24,7 @@ const navItems = [
   { name: 'Chat', icon: MessageSquare, path: '/' },
   { name: 'Khách hàng', icon: Users, path: '/customers' },
   { name: 'Tag', icon: Tag, path: '/tags' },
+  { name: 'Thư viện ảnh', icon: Library, path: '/media-library' },
   { name: 'Báo cáo', icon: BarChart3, path: '/reports' },
 ];
 
