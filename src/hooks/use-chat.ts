@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { ConversationInboxItem, ZaloMessage } from '@/types/chat';
 
-// Fetch all conversations for the inbox view
+// Fetch all conversations for the inbox view, starting from events
 export const useConversations = () => {
   return useQuery<ConversationInboxItem[]>({
     queryKey: ['conversations'],
@@ -11,57 +11,72 @@ export const useConversations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Step 1: Fetch customers and their related tags
-      const { data: customersWithTags, error: customerError } = await supabase
-        .from('customers')
-        .select('*, tags (*)')
-        .eq('user_id', user.id);
-
-      if (customerError) throw new Error(customerError.message);
-      if (!customersWithTags || customersWithTags.length === 0) return [];
-
-      // Step 2: Get all customer zalo_ids
-      const customerZaloIds = customersWithTags.map(c => c.zalo_id);
-
-      // Step 3: Fetch all events for these customers to find the latest one for each
+      // 1. Get the latest event for each distinct threadId from zalo_events
       const { data: allEvents, error: eventsError } = await supabase
         .from('zalo_events')
-        .select('threadId, content, ts')
-        .in('threadId', customerZaloIds)
+        .select('threadId, content, ts, dName')
+        .eq('user_id', user.id)
         .order('ts', { ascending: false });
 
       if (eventsError) throw new Error(eventsError.message);
+      if (!allEvents) return [];
 
-      // Create a map of the latest event for each conversation (threadId)
-      const latestEventsMap = new Map<string, { content: string | null, ts: string }>();
-      if (allEvents) {
-        for (const event of allEvents) {
-          if (!latestEventsMap.has(event.threadId)) {
-            latestEventsMap.set(event.threadId, { content: event.content, ts: event.ts });
-          }
+      const latestEventsMap = new Map<string, { content: string | null, ts: string, dName: string | null }>();
+      const uniqueThreadIds: string[] = [];
+      for (const event of allEvents) {
+        if (!latestEventsMap.has(event.threadId)) {
+          latestEventsMap.set(event.threadId, {
+            content: event.content,
+            ts: event.ts,
+            dName: event.dName,
+          });
+          uniqueThreadIds.push(event.threadId);
         }
       }
 
-      // Step 4: Combine customer data with their latest message
-      const conversations: ConversationInboxItem[] = customersWithTags.map(customer => {
-        const latestEvent = latestEventsMap.get(customer.zalo_id);
+      if (uniqueThreadIds.length === 0) return [];
+
+      // 2. Fetch corresponding customers and their tags to enrich the data
+      const { data: customers, error: customersError } = await supabase
+        .from('customers')
+        .select('id, zalo_id, display_name, avatar_url, tags (*)')
+        .in('zalo_id', uniqueThreadIds);
+
+      if (customersError) throw new Error(customersError.message);
+
+      const customersMap = new Map();
+      if (customers) {
+        for (const customer of customers) {
+          customersMap.set(customer.zalo_id, customer);
+        }
+      }
+
+      // 3. Combine event data with customer data
+      const conversations: ConversationInboxItem[] = uniqueThreadIds.map(threadId => {
+        const latestEvent = latestEventsMap.get(threadId)!;
+        const customer = customersMap.get(threadId);
+
+        const customerData = customer
+          ? {
+              id: customer.id,
+              zalo_id: customer.zalo_id,
+              display_name: customer.display_name || latestEvent.dName || 'Unknown User',
+              avatar_url: customer.avatar_url || null,
+            }
+          : null;
+
         return {
-          id: customer.id,
-          last_message_preview: latestEvent?.content || 'No messages yet',
-          last_message_at: latestEvent?.ts || customer.created_at,
-          unread_count: 0, // Unread count logic needs to be implemented separately
-          customer: {
-            id: customer.id,
-            zalo_id: customer.zalo_id,
-            display_name: customer.display_name || 'Khách hàng',
-            avatar_url: customer.avatar_url || null,
-          },
-          tags: customer.tags || [],
+          id: threadId, // The conversation ID is now the threadId
+          last_message_preview: latestEvent.content || 'No messages yet',
+          last_message_at: latestEvent.ts,
+          unread_count: 0, // Placeholder for unread count logic
+          customer: customerData,
+          tags: customer ? customer.tags : [],
         };
       });
 
-      // Sort conversations by the most recent message
-      return conversations.sort((a, b) => 
+      // 4. Sort conversations by the most recent message
+      return conversations.sort((a, b) =>
         new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime()
       );
     },
@@ -69,26 +84,17 @@ export const useConversations = () => {
 };
 
 
-// Fetch messages for a single selected conversation (customer)
-export const useMessages = (customerId: string | null) => {
+// Fetch messages for a single selected conversation (by threadId)
+export const useMessages = (threadId: string | null) => {
     return useQuery<ZaloMessage[]>({
-        queryKey: ['messages', customerId],
+        queryKey: ['messages', threadId],
         queryFn: async () => {
-            if (!customerId) return [];
-
-            // Messages are in zalo_events, we need to find the threadId (customer's zalo_id)
-            const { data: customer, error: customerError } = await supabase
-              .from('customers')
-              .select('zalo_id')
-              .eq('id', customerId)
-              .single();
-            
-            if (customerError || !customer) throw new Error("Customer not found");
+            if (!threadId) return [];
 
             const { data, error } = await supabase
                 .from('zalo_events')
                 .select('*')
-                .eq('threadId', customer.zalo_id)
+                .eq('threadId', threadId)
                 .order('ts', { ascending: true });
 
             if (error) throw new Error(error.message);
@@ -102,7 +108,7 @@ export const useMessages = (customerId: string | null) => {
               sender_zalo_id: event.uidFrom,
             }));
         },
-        enabled: !!customerId,
+        enabled: !!threadId,
     });
 };
 
@@ -118,7 +124,6 @@ export const useChatSubscription = () => {
                 { event: '*', schema: 'public', table: 'zalo_events' },
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                    // We can refine this to not invalidate all messages queries later
                     queryClient.invalidateQueries({ queryKey: ['messages'] });
                 }
             )
@@ -134,7 +139,6 @@ export const useChatSubscription = () => {
                 { event: '*', schema: 'public', table: 'customer_tags' },
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                    queryClient.invalidateQueries({ queryKey: ['customer_tags'] });
                 }
             )
             .subscribe();

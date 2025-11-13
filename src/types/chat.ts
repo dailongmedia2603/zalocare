@@ -20,10 +20,10 @@ export interface ZaloMessage {
 
 // Represents a conversation item in the inbox list
 export type ConversationInboxItem = {
-  id: string;
+  id: string; // This is the threadId (zalo_id)
   last_message_preview: string | null;
   last_message_at: string | null;
   unread_count: number;
-  customer: ZaloCustomer;
-  tags: Tag[]; // Add tags to the conversation type
+  customer: ZaloCustomer | null; // Customer can be null if not yet created in the customers table
+  tags: Tag[];
 };

@@ -13,7 +13,8 @@ interface ConversationItemProps {
 }
 
 const ConversationItem = ({ conversation, isSelected, onClick }: ConversationItemProps) => {
-  const customerName = conversation.customer?.display_name || 'Unknown User';
+  const customerName = conversation.customer?.display_name || 'Khách hàng mới';
+  const avatarUrl = conversation.customer?.avatar_url;
   
   const timeAgo = conversation.last_message_at
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
@@ -29,7 +30,7 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     >
       <div className="flex items-start w-full">
         <Avatar className="w-10 h-10 mr-3">
-          <AvatarImage src={conversation.customer?.avatar_url || '/placeholder.svg'} alt={customerName} />
+          <AvatarImage src={avatarUrl || '/placeholder.svg'} alt={customerName} />
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden">

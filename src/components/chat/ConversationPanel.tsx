@@ -31,14 +31,15 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
     );
   }
 
-  const customerName = conversation.customer?.display_name || 'Unknown User';
+  const customerName = conversation.customer?.display_name || 'Khách hàng mới';
+  const avatarUrl = conversation.customer?.avatar_url;
 
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex items-center justify-between p-3 border-b">
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarImage src={conversation.customer?.avatar_url || '/placeholder.svg'} />
+            <AvatarImage src={avatarUrl || '/placeholder.svg'} />
             <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
           </Avatar>
           <div>

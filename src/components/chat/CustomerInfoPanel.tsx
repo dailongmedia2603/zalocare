@@ -82,8 +82,22 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
     onError: (error) => showError(error.message),
   });
 
-  if (!conversation || !conversation.customer) {
+  if (!conversation) {
     return <div className="w-[360px] border-l bg-gray-50"></div>;
+  }
+
+  // Handle case where customer record might not exist yet
+  if (!conversation.customer) {
+    return (
+      <div className="w-[360px] border-l flex flex-col items-center justify-center p-4 text-center">
+        <Avatar className="w-20 h-20 mx-auto">
+          <AvatarImage src={'/placeholder.svg'} />
+          <AvatarFallback>?</AvatarFallback>
+        </Avatar>
+        <h3 className="mt-3 font-bold text-lg">Khách hàng mới</h3>
+        <p className="text-sm text-gray-500">Thông tin chi tiết sẽ được cập nhật sau.</p>
+      </div>
+    );
   }
 
   const { customer, tags: assignedTags } = conversation;
