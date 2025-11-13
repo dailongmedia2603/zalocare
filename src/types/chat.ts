@@ -1,3 +1,5 @@
+import { Tag } from "@/pages/Tags";
+
 // Represents a customer from Zalo
 export interface ZaloCustomer {
   id: string;
@@ -23,4 +25,5 @@ export type ConversationInboxItem = {
   last_message_at: string | null;
   unread_count: number;
   customer: ZaloCustomer;
+  tags: Tag[]; // Add tags to the conversation type
 };
