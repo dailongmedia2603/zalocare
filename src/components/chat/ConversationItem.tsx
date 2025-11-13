@@ -20,6 +20,19 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
+  const truncatePreview = (text: string | null, wordLimit: number): string => {
+    if (!text) {
+      return '';
+    }
+    const words = text.split(' ');
+    if (words.length > wordLimit) {
+      return words.slice(0, wordLimit).join(' ') + '...';
+    }
+    return text;
+  };
+
+  const messagePreview = truncatePreview(conversation.last_message_preview, 9);
+
   return (
     <div
       onClick={onClick}
@@ -40,7 +53,7 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
           </div>
           <div className="flex justify-between items-start mt-1">
             <p className="text-xs text-gray-500 truncate pr-2">
-              {conversation.last_message_preview}
+              {messagePreview}
             </p>
             {conversation.unread_count > 0 && (
               <Badge className="bg-orange-500 text-white h-5 px-2">{conversation.unread_count}</Badge>
