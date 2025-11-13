@@ -16,15 +16,25 @@ interface InboxPanelProps {
 
 const InboxPanel = ({ conversations, selectedConversationId, onSelectConversation }: InboxPanelProps) => {
   const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const unreadCount = conversations.filter(c => c.unread_count > 0).length;
   const allCount = conversations.length;
 
   const filteredConversations = conversations.filter(conv => {
-    if (filter === 'unread') {
-      return conv.unread_count > 0;
+    // Filter by 'unread' or 'all'
+    const filterPass = filter === 'unread' ? conv.unread_count > 0 : true;
+    if (!filterPass) {
+      return false;
     }
-    return true;
+
+    // Filter by search term
+    if (searchTerm.trim() === '') {
+      return true;
+    }
+
+    const customerName = conv.customer?.display_name?.toLowerCase() || '';
+    return customerName.includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -36,7 +46,12 @@ const InboxPanel = ({ conversations, selectedConversationId, onSelectConversatio
         </h2>
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input placeholder="Tìm kiếm khách hàng..." className="pl-9" />
+          <Input
+            placeholder="Tìm kiếm khách hàng..."
+            className="pl-9"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
         <div className="flex items-center gap-2 mt-3">
           <Tooltip>
