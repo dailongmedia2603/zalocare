@@ -24,8 +24,8 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     <div
       onClick={onClick}
       className={cn(
-        'flex flex-col p-3 rounded-lg cursor-pointer transition-colors',
-        isSelected ? 'bg-orange-50' : 'hover:bg-gray-50'
+        'flex flex-col p-3 rounded-lg cursor-pointer transition-colors border-l-4',
+        isSelected ? 'bg-orange-50 border-orange-500' : 'hover:bg-gray-50 border-transparent'
       )}
     >
       <div className="flex items-start w-full">
