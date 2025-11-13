@@ -2,6 +2,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bot, Webhook, Link2 } from "lucide-react";
 import GeminiCustomSettings from "@/components/GeminiCustomSettings";
 import ZaloConnectionSettings from "@/components/ZaloConnectionSettings";
+import N8NWebhookSettings from "@/components/N8NWebhookSettings";
 
 const Settings = () => {
   return (
@@ -35,7 +36,7 @@ const Settings = () => {
             value="webhook"
             className="flex items-center gap-3 p-3 border rounded-lg data-[state=active]:bg-orange-50 data-[state=active]:border-orange-200 data-[state=active]:shadow-sm"
           >
-            <div className="p-2 bg-orange-600 rounded-md border border-orange-700">
+            <div className="p-2 bg-green-600 rounded-md border border-green-700">
               <Webhook className="w-5 h-5 text-white" />
             </div>
             <span className="font-semibold text-gray-700">
@@ -55,10 +56,7 @@ const Settings = () => {
         </TabsContent>
         <TabsContent value="webhook" className="mt-6">
           <div className="p-6 border rounded-lg bg-white">
-            <h3 className="text-lg font-semibold mb-4">Cấu hình Webhook N8N</h3>
-            <p className="text-gray-500">
-              Nội dung cấu hình cho Webhook N8N sẽ được hiển thị ở đây.
-            </p>
+            <N8NWebhookSettings />
           </div>
         </TabsContent>
       </Tabs>
