@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ const fetchMedia = async () => {
 const MediaLibrary = () => {
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const fileInputRef = useState<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: media, isLoading } = useQuery<MediaItem[]>({
     queryKey: ['media_library'],
