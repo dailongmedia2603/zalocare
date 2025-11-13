@@ -1,43 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
-import { ConversationInboxItem, ZaloMessage, ZaloCustomer } from '@/types/chat';
-import { Tag } from '@/pages/Tags';
-
-// This function transforms the flat data from Supabase into a structured conversation list
-const transformDataToConversations = (
-  customers: any[] | null
-): ConversationInboxItem[] => {
-  if (!customers) {
-    return [];
-  }
-
-  // Find the latest event for each customer to use as the preview
-  const conversationMap = new Map<string, ConversationInboxItem>();
-
-  for (const customer of customers) {
-    const latestEvent = customer.zalo_events && customer.zalo_events.length > 0 ? customer.zalo_events[0] : null;
-    
-    const conversation: ConversationInboxItem = {
-      id: customer.id, // Use customer id as conversation id
-      last_message_preview: latestEvent?.content || 'No messages yet',
-      last_message_at: latestEvent?.ts || customer.created_at,
-      unread_count: 0, // Unread count logic needs to be implemented separately
-      customer: {
-        id: customer.id,
-        zalo_id: customer.zalo_id,
-        display_name: customer.display_name || 'Khách hàng',
-        avatar_url: customer.avatar_url || null,
-      },
-      tags: customer.tags || [],
-    };
-    conversationMap.set(customer.id, conversation);
-  }
-
-  return Array.from(conversationMap.values()).sort((a, b) => 
-    new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime()
-  );
-};
+import { ConversationInboxItem, ZaloMessage } from '@/types/chat';
 
 // Fetch all conversations for the inbox view
 export const useConversations = () => {
@@ -47,21 +11,59 @@ export const useConversations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // Fetch customers and their related tags and latest message
-      const { data, error } = await supabase
+      // Step 1: Fetch customers and their related tags
+      const { data: customersWithTags, error: customerError } = await supabase
         .from('customers')
-        .select(`
-          *,
-          tags (*),
-          zalo_events ( content, ts )
-        `)
-        .eq('user_id', user.id)
-        .order('ts', { foreignTable: 'zalo_events', ascending: false })
-        .limit(1, { foreignTable: 'zalo_events' });
+        .select('*, tags (*)')
+        .eq('user_id', user.id);
 
-      if (error) throw new Error(error.message);
-      
-      return transformDataToConversations(data);
+      if (customerError) throw new Error(customerError.message);
+      if (!customersWithTags || customersWithTags.length === 0) return [];
+
+      // Step 2: Get all customer zalo_ids
+      const customerZaloIds = customersWithTags.map(c => c.zalo_id);
+
+      // Step 3: Fetch all events for these customers to find the latest one for each
+      const { data: allEvents, error: eventsError } = await supabase
+        .from('zalo_events')
+        .select('threadId, content, ts')
+        .in('threadId', customerZaloIds)
+        .order('ts', { ascending: false });
+
+      if (eventsError) throw new Error(eventsError.message);
+
+      // Create a map of the latest event for each conversation (threadId)
+      const latestEventsMap = new Map<string, { content: string | null, ts: string }>();
+      if (allEvents) {
+        for (const event of allEvents) {
+          if (!latestEventsMap.has(event.threadId)) {
+            latestEventsMap.set(event.threadId, { content: event.content, ts: event.ts });
+          }
+        }
+      }
+
+      // Step 4: Combine customer data with their latest message
+      const conversations: ConversationInboxItem[] = customersWithTags.map(customer => {
+        const latestEvent = latestEventsMap.get(customer.zalo_id);
+        return {
+          id: customer.id,
+          last_message_preview: latestEvent?.content || 'No messages yet',
+          last_message_at: latestEvent?.ts || customer.created_at,
+          unread_count: 0, // Unread count logic needs to be implemented separately
+          customer: {
+            id: customer.id,
+            zalo_id: customer.zalo_id,
+            display_name: customer.display_name || 'Khách hàng',
+            avatar_url: customer.avatar_url || null,
+          },
+          tags: customer.tags || [],
+        };
+      });
+
+      // Sort conversations by the most recent message
+      return conversations.sort((a, b) => 
+        new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime()
+      );
     },
   });
 };
