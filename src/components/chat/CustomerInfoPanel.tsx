@@ -219,14 +219,24 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
 
       <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
         <div className="px-4 pt-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="info">
-              <UserCircle className="mr-2 h-4 w-4" />
-              Thông tin
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-0">
+            <TabsTrigger
+              value="info"
+              className="flex items-center justify-center gap-2 rounded-md border p-2 data-[state=active]:border-orange-200 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+            >
+              <div className="rounded-md bg-blue-100 p-1.5">
+                <UserCircle className="h-5 w-5 text-blue-600" />
+              </div>
+              <span className="font-semibold">Thông tin</span>
             </TabsTrigger>
-            <TabsTrigger value="care">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Chăm sóc
+            <TabsTrigger
+              value="care"
+              className="flex items-center justify-center gap-2 rounded-md border p-2 data-[state=active]:border-orange-200 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+            >
+              <div className="rounded-md bg-orange-100 p-1.5">
+                <Sparkles className="h-5 w-5 text-orange-500" />
+              </div>
+              <span className="font-semibold">Chăm sóc</span>
             </TabsTrigger>
           </TabsList>
         </div>
