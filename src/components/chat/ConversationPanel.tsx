@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationInboxItem } from '@/types/chat';
-import { Phone, Video, Info, Paperclip, SendHorizonal, Loader2 } from 'lucide-react';
+import { Paperclip, SendHorizonal, Loader2 } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { useMessages } from '@/hooks/use-chat';
 import { useEffect, useRef } from 'react';
@@ -46,11 +46,6 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
             <h3 className="font-bold">{customerName}</h3>
             {/* Online status can be added later */}
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon"><Phone className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon"><Video className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon"><Info className="w-5 h-5" /></Button>
         </div>
       </div>
       <ScrollArea className="flex-1 bg-gray-50/50" ref={scrollAreaRef}>
