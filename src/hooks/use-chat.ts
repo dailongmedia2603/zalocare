@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { ConversationInboxItem, ZaloMessage } from '@/types/chat';
+import { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Fetch all conversations for the inbox view, starting from events
 export const useConversations = () => {
@@ -119,21 +120,29 @@ export const useChatSubscription = () => {
 
     useEffect(() => {
         const channel = supabase
-            .channel('realtime-chat-updates')
+            .channel('realtime-chat-v2') // Using a new channel name to avoid potential conflicts
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'zalo_events' },
-                () => {
-                    // When a new message arrives, invalidate queries to refetch data.
+                (payload: RealtimePostgresChangesPayload<any>) => {
+                    // Invalidate the main conversations list to update previews, order, etc.
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                    queryClient.invalidateQueries({ queryKey: ['messages'] });
+
+                    // Invalidate messages for the specific conversation that received an update
+                    const threadId = payload.new?.threadId || payload.old?.threadId;
+                    if (threadId) {
+                        queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+                    } else {
+                        // As a fallback, invalidate all message queries if threadId isn't in the payload
+                        queryClient.invalidateQueries({ queryKey: ['messages'] });
+                    }
                 }
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'customers' },
                 () => {
-                    // If customer info (like name) changes, update the conversation list.
+                    // If customer info (like name or avatar) changes, refetch conversations
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
@@ -141,13 +150,13 @@ export const useChatSubscription = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'customer_tags' },
                 () => {
-                    // If tags change, update the conversation list.
+                    // If tags are added or removed, refetch conversations to display them
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
             .subscribe();
 
-        // Cleanup function to remove the subscription when the component unmounts.
+        // Cleanup function to remove the subscription when the component unmounts
         return () => {
             supabase.removeChannel(channel);
         };
