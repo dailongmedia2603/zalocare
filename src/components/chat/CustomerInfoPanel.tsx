@@ -30,7 +30,7 @@ const useAvailableTags = () => {
   return useQuery<Tag[]>({
     queryKey: ['tags'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tags').select('*');
+      const { data, error } = await supabase.from('tags').select('*').order('name', { ascending: true });
       if (error) throw new Error(error.message);
       return data;
     },
@@ -141,7 +141,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
                   Thêm
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="p-0 w-[200px]" align="end">
+              <PopoverContent className="p-0 w-[220px]" align="end">
                 <Command>
                   <CommandInput placeholder="Tìm kiếm tag..." />
                   <CommandList>
@@ -150,17 +150,26 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
                       {isLoadingTags ? (
                         <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
                       ) : (
-                        unassignedTags?.map((tag) => (
-                          <CommandItem
-                            key={tag.id}
-                            onSelect={() => {
-                              addTagMutation.mutate(tag.id);
-                              setIsTagPopoverOpen(false);
-                            }}
-                          >
-                            {tag.name}
-                          </CommandItem>
-                        ))
+                        unassignedTags?.map((tag) => {
+                          const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
+                          return (
+                            <CommandItem
+                              key={tag.id}
+                              onSelect={() => {
+                                addTagMutation.mutate(tag.id);
+                                setIsTagPopoverOpen(false);
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
+                                  <Icon className="w-3 h-3" />
+                                </div>
+                                <span>{tag.name}</span>
+                              </div>
+                            </CommandItem>
+                          );
+                        })
                       )}
                     </CommandGroup>
                   </CommandList>
@@ -172,7 +181,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             {assignedTags.map((tag) => {
               const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
               return (
-                <Badge key={tag.id} variant="secondary" className={cn("py-1 pl-2 pr-1 gap-1", tag.color, "text-white")}>
+                <Badge key={tag.id} variant="secondary" className={cn("py-1 pl-2 pr-1 gap-1.5", tag.color, "text-white")}>
                   <Icon className="w-3 h-3" />
                   {tag.name}
                   <button
