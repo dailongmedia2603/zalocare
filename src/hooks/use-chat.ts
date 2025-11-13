@@ -60,7 +60,8 @@ export const useConversations = () => {
           ? {
               id: customer.id,
               zalo_id: customer.zalo_id,
-              display_name: customer.display_name || latestEvent.dName || 'Unknown User',
+              // Prioritize the display_name from the customers table as requested.
+              display_name: customer.display_name || latestEvent.dName || 'Khách hàng mới',
               avatar_url: customer.avatar_url || null,
             }
           : null;
@@ -118,11 +119,12 @@ export const useChatSubscription = () => {
 
     useEffect(() => {
         const channel = supabase
-            .channel('realtime-chat-and-customers')
+            .channel('realtime-chat-updates')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'zalo_events' },
                 () => {
+                    // When a new message arrives, invalidate queries to refetch data.
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                     queryClient.invalidateQueries({ queryKey: ['messages'] });
                 }
@@ -131,6 +133,7 @@ export const useChatSubscription = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'customers' },
                 () => {
+                    // If customer info (like name) changes, update the conversation list.
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
@@ -138,11 +141,13 @@ export const useChatSubscription = () => {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'customer_tags' },
                 () => {
+                    // If tags change, update the conversation list.
                     queryClient.invalidateQueries({ queryKey: ['conversations'] });
                 }
             )
             .subscribe();
 
+        // Cleanup function to remove the subscription when the component unmounts.
         return () => {
             supabase.removeChannel(channel);
         };

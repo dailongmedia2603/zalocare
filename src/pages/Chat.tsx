@@ -6,13 +6,13 @@ import { useConversations, useChatSubscription } from '@/hooks/use-chat';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Chat = () => {
-  // Subscribe to real-time updates
+  // This custom hook sets up the real-time subscription for the entire chat interface.
   useChatSubscription();
 
   const { data: conversations, isLoading } = useConversations();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Auto-select the first conversation when data loads
+  // Auto-select the first conversation when data loads or changes.
   useEffect(() => {
     if (!selectedConversationId && conversations && conversations.length > 0) {
       setSelectedConversationId(conversations[0].id);
