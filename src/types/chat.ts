@@ -2,7 +2,7 @@ import { Tag } from "@/pages/Tags";
 
 // Represents a customer from Zalo
 export interface ZaloCustomer {
-  id: string;
+  id: string | null; // ID có thể là null nếu khách hàng chưa được tạo trong bảng customers
   zalo_id: string;
   display_name: string;
   avatar_url: string | null;

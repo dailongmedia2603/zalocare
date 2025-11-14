@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
 import { ConversationInboxItem, ZaloMessage } from '@/types/chat';
 
-// Fetch all conversations for the inbox view, starting from events
+// Fetch all conversations for the inbox view using a database function
 export const useConversations = () => {
   return useQuery<ConversationInboxItem[]>({
     queryKey: ['conversations'],
@@ -11,75 +11,18 @@ export const useConversations = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
 
-      // 1. Get the latest event for each distinct threadId from zalo_events
-      const { data: allEvents, error: eventsError } = await supabase
-        .from('zalo_events')
-        .select('threadId, content, ts, dName')
-        .eq('user_id', user.id)
-        .order('ts', { ascending: false });
+      // Gọi RPC function để lấy dữ liệu cuộc trò chuyện.
+      // Function này hiệu quả và đáng tin cậy hơn vì nó tính toán tin nhắn mới nhất ở phía database.
+      const { data, error } = await supabase
+        .rpc('get_user_conversations_inbox', { p_user_id: user.id });
 
-      if (eventsError) throw new Error(eventsError.message);
-      if (!allEvents) return [];
-
-      const latestEventsMap = new Map<string, { content: string | null, ts: string, dName: string | null }>();
-      const uniqueThreadIds: string[] = [];
-      for (const event of allEvents) {
-        if (!latestEventsMap.has(event.threadId)) {
-          latestEventsMap.set(event.threadId, {
-            content: event.content,
-            ts: event.ts,
-            dName: event.dName,
-          });
-          uniqueThreadIds.push(event.threadId);
-        }
+      if (error) {
+        console.error("Error fetching conversations via RPC:", error);
+        throw new Error(error.message);
       }
-
-      if (uniqueThreadIds.length === 0) return [];
-
-      // 2. Fetch corresponding customers and their tags to enrich the data
-      const { data: customers, error: customersError } = await supabase
-        .from('customers')
-        .select('id, zalo_id, display_name, avatar_url, tags (*)')
-        .in('zalo_id', uniqueThreadIds);
-
-      if (customersError) throw new Error(customersError.message);
-
-      const customersMap = new Map();
-      if (customers) {
-        for (const customer of customers) {
-          customersMap.set(customer.zalo_id, customer);
-        }
-      }
-
-      // 3. Combine event data with customer data
-      const conversations: ConversationInboxItem[] = uniqueThreadIds.map(threadId => {
-        const latestEvent = latestEventsMap.get(threadId)!;
-        const customer = customersMap.get(threadId);
-
-        const customerData = customer
-          ? {
-              id: customer.id,
-              zalo_id: customer.zalo_id,
-              // Prioritize the display_name from the customers table as requested.
-              display_name: customer.display_name || latestEvent.dName || 'Khách hàng mới',
-              avatar_url: customer.avatar_url || null,
-            }
-          : null;
-
-        return {
-          id: threadId, // The conversation ID is now the threadId
-          last_message_preview: latestEvent.content || 'No messages yet',
-          last_message_at: latestEvent.ts,
-          unread_count: 0, // Placeholder for unread count logic
-          customer: customerData,
-          tags: customer ? customer.tags : [],
-        };
-      });
-
-      // 4. Sort conversations by the most recent message
-      return conversations.sort((a, b) =>
-        new Date(b.last_message_at!).getTime() - new Date(a.last_message_at!).getTime()
-      );
+      
+      // RPC function được thiết kế để trả về dữ liệu có cấu trúc chính xác như ConversationInboxItem[]
+      return data || [];
     },
   });
 };
