@@ -84,11 +84,14 @@ serve(async (req) => {
     let result;
     try {
       const initialResponse = JSON.parse(responseText);
+      // Prioritize the 'answer' field if it exists, otherwise use the whole response
       const answerString = initialResponse.answer || responseText;
+      // Find JSON within markdown block first
       const jsonMatch = answerString.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         result = JSON.parse(jsonMatch[1]);
       } else {
+        // If no markdown, try to parse the string directly (it might be a stringified JSON)
         result = JSON.parse(answerString);
       }
     } catch (e) {
