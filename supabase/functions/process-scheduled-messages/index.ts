@@ -70,7 +70,8 @@ serve(async (req) => {
 
     // 2. Process each message
     const processingPromises = messages.map(async (message) => {
-      const webhookUrl = settingsMap.get(message.user_id);
+      // Trim the URL to remove any accidental whitespace
+      const webhookUrl = settingsMap.get(message.user_id)?.trim();
 
       if (!webhookUrl) {
         console.warn(`No webhook URL for user ${message.user_id}. Marking message ${message.id} as failed.`);
@@ -101,9 +102,12 @@ serve(async (req) => {
         });
 
         const newStatus = n8nResponse.ok ? 'sent' : 'failed';
+        
         if (!n8nResponse.ok) {
-            console.error(`Failed to send message ${message.id} to N8N. Status: ${n8nResponse.status}`);
+            const errorBody = await n8nResponse.text();
+            console.error(`Failed to send message ${message.id} to N8N. Status: ${n8nResponse.status}. URL: ${webhookUrl}. Response: ${errorBody}`);
         }
+
         await supabaseAdmin
           .from('scheduled_messages')
           .update({ status: newStatus })
