@@ -40,11 +40,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 4. Fetch user's configurations (API URL, Prompt, Customer ID)
+    // 4. Fetch user's configurations (API URL, Prompt, Customer)
     const [settingsRes, promptRes, customerRes] = await Promise.all([
       supabaseAdmin.from('settings').select('gemini_api_url').eq('user_id', user.id).single(),
       supabaseAdmin.from('prompt_configs').select('prompt_text').eq('user_id', user.id).single(),
-      supabaseAdmin.from('customers').select('id').eq('zalo_id', threadId).eq('user_id', user.id).single()
+      supabaseAdmin.from('customers').select('id, display_name').eq('zalo_id', threadId).eq('user_id', user.id).single()
     ]);
 
     if (settingsRes.error || !settingsRes.data?.gemini_api_url) {
@@ -63,8 +63,9 @@ serve(async (req) => {
         });
     }
     const { gemini_api_url } = settingsRes.data;
-    const { prompt_text } = promptRes.data;
+    let { prompt_text } = promptRes.data;
     const customerId = customerRes.data.id;
+    const customerName = customerRes.data.display_name || 'khách';
 
     // 5. Fetch message history
     const { data: messages, error: messagesError } = await supabaseAdmin
@@ -75,18 +76,21 @@ serve(async (req) => {
 
     if (messagesError) throw messagesError;
 
-    // 6. Format history and prepare the final prompt
+    // 6. Format history and prepare the final prompt with all variables
     const formattedHistory = messages
       .map(msg => (msg.isSelf ? `Shop: ${msg.content}` : `Khách: ${msg.content}`))
       .join('\n');
-    const finalPrompt = prompt_text.replace('{{MESSAGE_HISTORY}}', formattedHistory);
+    
+    prompt_text = prompt_text.replace('{{MESSAGE_HISTORY}}', formattedHistory);
+    prompt_text = prompt_text.replace('{{CUSTOMER_NAME}}', customerName);
+    prompt_text = prompt_text.replace('{{CURRENT_DATETIME}}', new Date().toISOString());
 
     // 7. Call Gemini API
     const geminiToken = Deno.env.get('GEMINI_API_TOKEN');
     if (!geminiToken) throw new Error("GEMINI_API_TOKEN is not set in Edge Function secrets.");
 
     const formData = new FormData();
-    formData.append('prompt', finalPrompt);
+    formData.append('prompt', prompt_text);
     formData.append('token', geminiToken);
 
     const geminiResponse = await fetch(gemini_api_url, {
@@ -101,12 +105,11 @@ serve(async (req) => {
 
     const result = await geminiResponse.json();
 
-    // 8. Validate Gemini response flexibly and create scheduled message
-    const messageContent = result.content || result.answer; // Accept 'content' or 'answer'
-    const scheduledTime = result.scheduled_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // Default to 24 hours later
+    // 8. STRICTLY validate Gemini response and create scheduled message
+    const { content, scheduled_at } = result;
 
-    if (!messageContent) {
-      throw new Error('Invalid response from Gemini API. Expected "content" or "answer".');
+    if (!content || !scheduled_at) {
+      throw new Error('Invalid response from Gemini API. Expected a JSON object with "content" and "scheduled_at" keys.');
     }
 
     const { error: insertError } = await supabaseAdmin
@@ -115,9 +118,9 @@ serve(async (req) => {
         customer_id: customerId,
         thread_id: threadId,
         user_id: user.id,
-        content: messageContent,
-        scheduled_at: scheduledTime,
-        prompt_log: finalPrompt, // Save the prompt log for debugging
+        content: content,
+        scheduled_at: scheduled_at,
+        prompt_log: prompt_text, // Save the full prompt log for debugging
       });
 
     if (insertError) throw insertError;

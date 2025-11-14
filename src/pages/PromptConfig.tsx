@@ -20,6 +20,44 @@ const promptSchema = z.object({
 
 type PromptFormValues = z.infer<typeof promptSchema>;
 
+const professionalPromptPlaceholder = `**VAI TRÒ:**
+Bạn là một chuyên gia chăm sóc khách hàng (CSKH) qua tin nhắn Zalo, với mục tiêu xây dựng lại mối quan hệ và khuyến khích khách hàng quay lại tương tác hoặc mua hàng.
+
+**BỐI CẢNH:**
+Bạn sẽ nhận được lịch sử trò chuyện cũ giữa shop và một khách hàng. Dựa vào đó, bạn cần soạn một tin nhắn hỏi thăm, chăm sóc khách hàng một cách tự nhiên, cá nhân hóa và hiệu quả.
+
+**BIẾN ĐỘNG:**
+- \`{{MESSAGE_HISTORY}}\`: Toàn bộ lịch sử trò chuyện trước đây.
+- \`{{CUSTOMER_NAME}}\`: Tên của khách hàng.
+- \`{{CURRENT_DATETIME}}\`: Ngày giờ hiện tại (định dạng ISO 8601) để bạn biết thời điểm bắt đầu phân tích.
+
+**NHIỆM VỤ:**
+1.  **Phân tích lịch sử chat (\`{{MESSAGE_HISTORY}}\`)**:
+    - Xác định sản phẩm khách hàng đã quan tâm hoặc mua.
+    - Hiểu rõ nhu cầu, vấn đề hoặc lần tương tác cuối cùng của họ.
+    - Đánh giá giọng văn, cách xưng hô phù hợp (ví dụ: "anh/chị", "bạn",...).
+2.  **Soạn thảo nội dung tin nhắn (\`content\`)**:
+    - Bắt đầu bằng lời chào cá nhân hóa, nhắc đến tên khách hàng \`{{CUSTOMER_NAME}}\`.
+    - Thể hiện sự quan tâm chân thành, hỏi thăm về sản phẩm họ đã mua hoặc quan tâm.
+    - Gợi mở một chủ đề liên quan (ví dụ: "Không biết sản phẩm X anh/chị dùng có tốt không ạ?", "Bên em vừa về thêm mẫu Y mới, tương tự mẫu anh/chị hỏi lần trước...").
+    - Giọng văn: Thân thiện, chuyên nghiệp, không quá bán hàng dồn dập.
+    - **KHÔNG** sử dụng icon/emoji.
+3.  **Đề xuất thời gian gửi (\`scheduled_at\`)**:
+    - Dựa vào lần cuối tương tác, đề xuất thời gian gửi tin nhắn hợp lý trong tương lai (từ 1 đến 3 ngày tới).
+    - Chọn giờ vàng (ví dụ: 11h-12h trưa, hoặc 20h-21h tối).
+    - **QUAN TRỌNG**: Thời gian phải ở định dạng chuỗi ISO 8601 (ví dụ: "2023-10-27T11:30:00.000Z").
+
+**YÊU CẦU KẾT QUẢ (RẤT QUAN TRỌNG):**
+Chỉ trả về một đối tượng JSON duy nhất, không có bất kỳ văn bản nào khác. Cấu trúc JSON phải chính xác như sau:
+{
+  "content": "Nội dung tin nhắn bạn đã soạn thảo...",
+  "scheduled_at": "Thời gian gửi bạn đề xuất theo định dạng ISO 8601..."
+}
+
+---
+**LỊCH SỬ TRÒ CHUYỆN:**
+{{MESSAGE_HISTORY}}`;
+
 // Function to fetch the user's prompt config
 const fetchPromptConfig = async () => {
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,7 +73,8 @@ const fetchPromptConfig = async () => {
     throw new Error(error.message);
   }
 
-  return data;
+  // If user has no saved prompt, return the professional placeholder
+  return data || { prompt_text: professionalPromptPlaceholder };
 };
 
 const PromptConfig = () => {
@@ -58,7 +97,7 @@ const PromptConfig = () => {
   // Update form with fetched data
   useEffect(() => {
     if (promptConfig) {
-      form.reset({ prompt_text: promptConfig.prompt_text || '' });
+      form.reset({ prompt_text: promptConfig.prompt_text || professionalPromptPlaceholder });
     }
   }, [promptConfig, form]);
 
@@ -124,7 +163,7 @@ const PromptConfig = () => {
                 <div>
                   <CardTitle className="text-2xl">Cấu hình Prompt</CardTitle>
                   <CardDescription>
-                    Thiết lập mẫu prompt để AI tự động tạo nội dung chăm sóc khách hàng.
+                    Thiết lập mẫu prompt để AI tự động tạo nội dung và lên lịch chăm sóc khách hàng.
                   </CardDescription>
                 </div>
               </div>
@@ -139,15 +178,23 @@ const PromptConfig = () => {
                     <FormControl>
                       <Textarea
                         id="prompt-text"
-                        rows={15}
-                        placeholder="Nhập mẫu prompt của bạn ở đây..."
-                        className="mt-2 text-base leading-relaxed"
+                        rows={20}
+                        placeholder={professionalPromptPlaceholder}
+                        className="mt-2 text-sm leading-relaxed font-mono"
                         {...field}
                       />
                     </FormControl>
-                    <p className="text-sm text-gray-500 mt-2">
-                      Sử dụng biến động <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">{'{{MESSAGE_HISTORY}}'}</code> để chèn toàn bộ lịch sử trò chuyện vào prompt.
-                    </p>
+                    <div className="text-sm text-gray-500 mt-3 space-y-1">
+                      <p>
+                        <span className="font-semibold">QUAN TRỌNG:</span> AI phải trả về kết quả dưới dạng JSON với 2 key bắt buộc: <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">content</code> và <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">scheduled_at</code>.
+                      </p>
+                      <p>
+                        Sử dụng các biến động sau để AI có thêm ngữ cảnh:
+                        <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">{'{{MESSAGE_HISTORY}}'}</code>,
+                        <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">{'{{CUSTOMER_NAME}}'}</code>,
+                        <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">{'{{CURRENT_DATETIME}}'}</code>.
+                      </p>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
