@@ -2,13 +2,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 
+const CRON_SECRET = Deno.env.get('CRON_SECRET') || "zalo-care-cron-secret-super-long-and-random-string";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// This function will be triggered by a cron job to process scheduled messages.
 serve(async (req) => {
+  // Security check: Ensure the request is from our trusted cron job
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    return new Response('Unauthorized', {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   const supabaseAdmin = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
