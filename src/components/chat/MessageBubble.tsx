@@ -13,6 +13,30 @@ interface MessageBubbleProps {
 const MessageBubble = ({ message }: MessageBubbleProps) => {
   const isMe = !message.is_from_customer;
 
+  /**
+   * Checks if the content is a structured message (like a JSON object from Zalo).
+   * @param content The message content string.
+   * @returns True if the content is likely a structured message, false otherwise.
+   */
+  const isStructuredMessage = (content: string | null | undefined): boolean => {
+    if (!content) {
+      return false;
+    }
+    const trimmedContent = content.trim();
+    // Heuristic: If it looks like a JSON object, we treat it as structured content.
+    if (trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) {
+      try {
+        JSON.parse(trimmedContent);
+        return true; // It's a valid JSON string.
+      } catch (e) {
+        return false; // It's not valid JSON.
+      }
+    }
+    return false;
+  };
+
+  const shouldShowContent = message.content && !isStructuredMessage(message.content);
+
   return (
     <div className={cn('flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>
       <div
@@ -23,7 +47,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
             : 'bg-white border rounded-bl-none'
         )}
       >
-        {message.content && <p className="text-sm">{message.content}</p>}
+        {shouldShowContent && <p className="text-sm">{message.content}</p>}
         
         {message.image_url && (
           <Dialog>
@@ -33,7 +57,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
                 alt="Hình ảnh đính kèm"
                 className={cn(
                   "mt-2 w-48 h-auto rounded-lg cursor-pointer object-cover",
-                  !message.content && "mt-0" // Remove margin top if there is no text
+                  !shouldShowContent && "mt-0" // Remove margin top if there is no text content
                 )}
               />
             </DialogTrigger>
