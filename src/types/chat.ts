@@ -16,6 +16,7 @@ export interface ZaloMessage {
   sent_at: string;
   is_from_customer: boolean;
   sender_zalo_id: string;
+  image_url?: string | null; // Added image_url field
 }
 
 // Represents a conversation item in the inbox list
@@ -48,5 +49,5 @@ export interface ScheduledMessage {
   scheduled_at: string;
   status: 'pending' | 'sent' | 'failed';
   created_at: string;
-  prompt_log: string | null; // Added prompt_log field
+  prompt_log: string | null;
 }

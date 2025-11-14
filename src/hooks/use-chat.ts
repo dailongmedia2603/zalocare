@@ -50,6 +50,7 @@ export const useMessages = (threadId: string | null) => {
               sent_at: event.ts,
               is_from_customer: !event.isSelf,
               sender_zalo_id: event.uidFrom,
+              image_url: event.image_url, // Map the new image_url field
             }));
         },
         enabled: !!threadId,
