@@ -71,7 +71,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
   }, [queryClient, customerId]);
 
   const addMessageMutation = useMutation({
-    mutationFn: async (newMessage: Omit<ScheduledMessage, 'id' | 'user_id' | 'status' | 'created_at'>) => {
+    mutationFn: async (newMessage: Omit<ScheduledMessage, 'id' | 'user_id' | 'status' | 'created_at' | 'prompt_log'>) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
       const { error } = await supabase.from('scheduled_messages').insert({ ...newMessage, user_id: user.id });
