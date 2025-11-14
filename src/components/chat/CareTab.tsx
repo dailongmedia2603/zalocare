@@ -7,14 +7,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Image as ImageIcon, Send, Trash2, Loader2, Clock, Bell, X } from 'lucide-react';
+import { Calendar as CalendarIcon, Image as ImageIcon, Send, Trash2, Loader2, Clock, Bell, X, Sparkles } from 'lucide-react';
 import { format, set } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
 import ImageSelectorDialog from './ImageSelectorDialog';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 
 interface CareTabProps {
   customerId: string;
@@ -29,7 +31,7 @@ const useScheduledMessages = (customerId: string) => {
         .from('scheduled_messages')
         .select('*')
         .eq('customer_id', customerId)
-        .order('scheduled_at', { ascending: false }); // Sắp xếp mới nhất lên đầu
+        .order('scheduled_at', { ascending: false });
       if (error) throw new Error(error.message);
       return data;
     },
@@ -46,7 +48,6 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
 
   const { data: scheduledMessages, isLoading } = useScheduledMessages(customerId);
 
-  // Lắng nghe thay đổi realtime từ Supabase
   useEffect(() => {
     const channel = supabase
       .channel(`scheduled-messages-${customerId}`)
@@ -59,13 +60,11 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
           filter: `customer_id=eq.${customerId}`,
         },
         () => {
-          // Khi có thay đổi, làm mới lại dữ liệu
           queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
         }
       )
       .subscribe();
 
-    // Dọn dẹp subscription khi component bị unmount
     return () => {
       supabase.removeChannel(channel);
     };
@@ -79,7 +78,6 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      // Không cần invalidate ở đây vì realtime sẽ xử lý
       showSuccess('Đã lên lịch gửi tin nhắn!');
       setContent('');
       setImageUrl('');
@@ -93,10 +91,42 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      // Không cần invalidate ở đây vì realtime sẽ xử lý
       showSuccess('Đã xóa lịch gửi!');
     },
     onError: (error: Error) => showError(`Lỗi: ${error.message}`),
+  });
+
+  const generateAiMessageMutation = useMutation<unknown, Error, void, { toastId: string | number }>({
+    mutationFn: async () => {
+      const hasPendingMessages = scheduledMessages?.some(msg => msg.status === 'pending');
+      if (hasPendingMessages) {
+        throw new Error('Đã có lịch chăm sóc đang chờ. AI sẽ không tạo thêm.');
+      }
+      const { data, error } = await supabase.functions.invoke('generate-care-message', {
+        body: { threadId },
+      });
+      if (error) {
+        try {
+          const errorJson = await error.context.json();
+          throw new Error(errorJson.error || 'Lỗi không xác định từ function.');
+        } catch (e) {
+          throw new Error(error.message);
+        }
+      }
+      return data;
+    },
+    onMutate: () => {
+      const toastId = showLoading("AI đang phân tích và tạo lịch chăm sóc...");
+      return { toastId };
+    },
+    onSuccess: (data, variables, context) => {
+      if (context?.toastId) dismissToast(context.toastId as string);
+      showSuccess('AI đã tự động lên lịch chăm sóc thành công!');
+    },
+    onError: (error: Error, variables, context) => {
+      if (context?.toastId) dismissToast(context.toastId as string);
+      showError(`Lỗi: ${error.message}`);
+    },
   });
 
   const handleSchedule = () => {
@@ -141,7 +171,23 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
-        <h4 className="text-sm font-semibold text-gray-600 mb-3">Tạo lịch gửi tin mới</h4>
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="text-sm font-semibold text-gray-600">Tạo lịch gửi tin mới</h4>
+          <div className="flex items-center space-x-2">
+            <Sparkles className="h-5 w-5 text-orange-500" />
+            <Label htmlFor="ai-cskh-toggle" className="font-semibold text-sm text-gray-700">AI CSKH</Label>
+            <Switch
+              id="ai-cskh-toggle"
+              checked={generateAiMessageMutation.isPending}
+              onCheckedChange={(checked) => {
+                if (checked) {
+                  generateAiMessageMutation.mutate();
+                }
+              }}
+              disabled={generateAiMessageMutation.isPending}
+            />
+          </div>
+        </div>
         <div className="space-y-3">
           <Textarea
             placeholder="Nhập nội dung tin nhắn..."
