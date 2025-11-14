@@ -48,5 +48,4 @@ export interface ScheduledMessage {
   scheduled_at: string;
   status: 'pending' | 'sent' | 'failed';
   created_at: string;
-  prompt_log: string | null; // Added prompt_log field
 }
