@@ -29,7 +29,7 @@ const useScheduledMessages = (customerId: string) => {
         .from('scheduled_messages')
         .select('*')
         .eq('customer_id', customerId)
-        .order('scheduled_at', { ascending: true });
+        .order('scheduled_at', { ascending: false }); // Sắp xếp mới nhất lên đầu
       if (error) throw new Error(error.message);
       return data;
     },
@@ -105,6 +105,14 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
     setIsImageSelectorOpen(false);
   };
 
+  const statusConfig = {
+    pending: { label: 'Chờ gửi', className: 'bg-yellow-500 hover:bg-yellow-600 text-white' },
+    sent: { label: 'Đã gửi', className: 'bg-green-500 hover:bg-green-600 text-white' },
+    failed: { label: 'Thất bại', className: 'bg-red-500 hover:bg-red-600 text-white' },
+  };
+
+  const pendingCount = scheduledMessages?.filter(msg => msg.status === 'pending').length || 0;
+
   return (
     <div className="flex flex-col h-full">
       <div className="p-4 border-b">
@@ -165,6 +173,9 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
         <h4 className="text-sm font-semibold text-gray-600 flex items-center gap-2">
           <Bell className="w-4 h-4" />
           Danh sách đã lên lịch
+          {pendingCount > 0 && (
+            <Badge className="bg-yellow-500 text-white h-5 px-1.5">{pendingCount}</Badge>
+          )}
         </h4>
         {isLoading ? (
           <div className="space-y-2">
@@ -172,32 +183,41 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
             <Skeleton className="h-16 w-full" />
           </div>
         ) : scheduledMessages && scheduledMessages.length > 0 ? (
-          scheduledMessages.map((msg) => (
-            <div key={msg.id} className="p-3 rounded-lg border bg-gray-50/80 flex items-start gap-3">
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                    <Clock className="w-4 h-4 text-orange-500" />
-                    {format(new Date(msg.scheduled_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
-                  </div>
-                  <Badge variant={msg.status === 'pending' ? 'default' : 'secondary'} className={cn(msg.status === 'pending' && 'bg-yellow-500')}>
-                    {msg.status}
-                  </Badge>
-                </div>
-                {msg.content && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{msg.content}</p>}
-                {msg.image_url && <img src={msg.image_url} alt="Scheduled" className="mt-2 rounded-md max-w-[100px] max-h-[100px]" />}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-red-500 hover:text-red-600"
-                onClick={() => deleteMessageMutation.mutate(msg.id)}
-                disabled={deleteMessageMutation.isPending}
+          scheduledMessages.map((msg) => {
+            const currentStatus = statusConfig[msg.status as keyof typeof statusConfig] || { label: msg.status, className: 'bg-gray-400' };
+            return (
+              <div
+                key={msg.id}
+                className={cn(
+                  'p-3 rounded-lg border flex items-start gap-3',
+                  msg.status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50/80'
+                )}
               >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                      <Clock className="w-4 h-4 text-orange-500" />
+                      {format(new Date(msg.scheduled_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                    </div>
+                    <Badge className={cn("border-transparent", currentStatus.className)}>
+                      {currentStatus.label}
+                    </Badge>
+                  </div>
+                  {msg.content && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{msg.content}</p>}
+                  {msg.image_url && <img src={msg.image_url} alt="Scheduled" className="mt-2 rounded-md max-w-[100px] max-h-[100px]" />}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-red-500 hover:text-red-600"
+                  onClick={() => deleteMessageMutation.mutate(msg.id)}
+                  disabled={deleteMessageMutation.isPending}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          })
         ) : (
           <p className="text-sm text-gray-400 text-center py-6">Chưa có lịch gửi nào.</p>
         )}
