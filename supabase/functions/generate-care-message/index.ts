@@ -114,6 +114,7 @@ serve(async (req) => {
         user_id: user.id,
         content: result.content,
         scheduled_at: result.scheduled_at,
+        prompt_log: finalPrompt, // Save the prompt log
       });
 
     if (insertError) throw insertError;
