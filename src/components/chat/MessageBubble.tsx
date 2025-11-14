@@ -37,11 +37,11 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
                 )}
               />
             </DialogTrigger>
-            <DialogContent className="max-w-2xl p-2 bg-transparent border-none">
+            <DialogContent className="max-w-[90vw] max-h-[90vh] p-0 bg-transparent border-none flex items-center justify-center">
               <img
                 src={message.image_url}
                 alt="Hình ảnh đính kèm"
-                className="w-full h-auto rounded-md"
+                className="max-w-full max-h-[85vh] object-contain rounded-lg"
               />
             </DialogContent>
           </Dialog>
