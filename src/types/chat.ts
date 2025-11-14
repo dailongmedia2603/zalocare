@@ -36,3 +36,16 @@ export interface CustomerNote {
   content: string;
   created_at: string;
 }
+
+// Represents a scheduled message
+export interface ScheduledMessage {
+  id: string;
+  user_id: string;
+  customer_id: string;
+  thread_id: string;
+  content: string | null;
+  image_url: string | null;
+  scheduled_at: string;
+  status: 'pending' | 'sent' | 'failed';
+  created_at: string;
+}

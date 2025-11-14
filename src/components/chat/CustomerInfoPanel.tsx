@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CareTab from './CareTab';
 
 // Fetch all available tags for the user
 const useAvailableTags = () => {
@@ -219,28 +220,24 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
 
       <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
         <div className="px-4 pt-4">
-          <TabsList className="h-auto bg-transparent p-0 grid grid-cols-2 gap-2">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-1 border border-orange-500">
             <TabsTrigger
               value="info"
-              className="flex items-center justify-center gap-2 p-2 border rounded-lg data-[state=active]:bg-orange-50 data-[state=active]:border-orange-200 data-[state=active]:shadow-sm w-full"
+              className="flex items-center justify-center gap-2 rounded-md p-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
             >
-              <div className="p-1.5 bg-blue-500 rounded-md">
-                <UserCircle className="w-4 h-4 text-white" />
+              <div className="rounded-md bg-blue-100 p-1.5">
+                <UserCircle className="h-5 w-5 text-blue-600" />
               </div>
-              <span className="font-semibold text-sm text-gray-700">
-                Thông tin
-              </span>
+              <span className="font-semibold">Thông tin</span>
             </TabsTrigger>
             <TabsTrigger
               value="care"
-              className="flex items-center justify-center gap-2 p-2 border rounded-lg data-[state=active]:bg-orange-50 data-[state=active]:border-orange-200 data-[state=active]:shadow-sm w-full"
+              className="flex items-center justify-center gap-2 rounded-md p-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
             >
-              <div className="p-1.5 bg-orange-500 rounded-md">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div className="rounded-md bg-orange-100 p-1.5">
+                <Sparkles className="h-5 w-5 text-orange-500" />
               </div>
-              <span className="font-semibold text-sm text-gray-700">
-                Chăm sóc
-              </span>
+              <span className="font-semibold">Chăm sóc</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -372,8 +369,17 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           </div>
         </TabsContent>
 
-        <TabsContent value="care" className="flex-1 overflow-y-auto p-4">
-          <p className="text-sm text-gray-500">Nội dung trang chăm sóc sẽ được hiển thị ở đây.</p>
+        <TabsContent value="care" className="flex-1 flex flex-col overflow-hidden mt-0">
+          {conversation.customer ? (
+            <CareTab 
+              customerId={conversation.customer.id} 
+              threadId={conversation.id} 
+            />
+          ) : (
+            <div className="p-4">
+              <p className="text-sm text-gray-500">Không thể lên lịch cho khách hàng này.</p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
       
