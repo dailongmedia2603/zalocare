@@ -163,6 +163,11 @@ const GeminiCustomSettings = () => {
           onChange={(e) => setApiUrl(e.target.value)}
           placeholder="https://your-api-endpoint.com/chat"
         />
+        <p className="text-xs text-gray-400">
+          Lưu ý: Hệ thống sẽ tự động đính kèm token từ biến môi trường (secret) 
+          <code className="font-mono text-xs bg-gray-200 text-gray-600 p-0.5 rounded mx-1">GEMINI_API_TOKEN</code> 
+          khi gửi yêu cầu.
+        </p>
       </div>
       <div className="flex items-center gap-4">
         <div className="flex gap-2">

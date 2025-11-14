@@ -21,16 +21,33 @@ serve(async (req) => {
       })
     }
 
+    // Lấy token từ biến môi trường (secrets)
+    const geminiToken = Deno.env.get('GEMINI_API_TOKEN');
+    if (!geminiToken) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        message: 'Lỗi cấu hình phía server.',
+        details: 'Biến môi trường GEMINI_API_TOKEN chưa được thiết lập trong phần Secrets của Supabase Edge Function.' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      })
+    }
+
     const testPrompt = prompt || 'Nguyễn Quang Hải là ai ?';
+
+    // Thêm token vào nội dung gửi đi
+    const body = new URLSearchParams({
+      prompt: testPrompt,
+      token: geminiToken,
+    });
 
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({
-        prompt: testPrompt,
-      }),
+      body: body,
     });
 
     // If it's a connection test (no prompt sent from client), return simple status
