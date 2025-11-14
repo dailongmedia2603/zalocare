@@ -242,7 +242,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           </TabsList>
         </div>
 
-        <TabsContent value="info" className="flex-1 flex flex-col overflow-hidden mt-0">
+        <TabsContent value="info" className="flex-1 flex flex-col min-h-0 mt-0">
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div>
               <h4 className="text-sm font-semibold text-gray-600 mb-2">Thông tin liên hệ</h4>
@@ -369,7 +369,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           </div>
         </TabsContent>
 
-        <TabsContent value="care" className="flex-1 flex flex-col overflow-hidden mt-0">
+        <TabsContent value="care" className="flex-1 flex flex-col min-h-0 mt-0">
           {conversation.customer ? (
             <CareTab 
               customerId={conversation.customer.id} 
