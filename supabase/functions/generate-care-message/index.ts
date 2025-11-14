@@ -8,11 +8,16 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Pre-declare variables to be available in the catch block
   let customerId;
   let threadId;
   let userId;
   let prompt_text;
+  let responseText; // To store raw response for logging
+
+  const supabaseAdmin = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
 
   try {
     // 1. Authenticate the user
@@ -23,9 +28,7 @@ serve(async (req) => {
     )
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser()
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      throw new Error('Unauthorized');
     }
     userId = user.id;
 
@@ -33,16 +36,8 @@ serve(async (req) => {
     const body = await req.json();
     threadId = body.threadId;
     if (!threadId) {
-      return new Response(JSON.stringify({ error: 'threadId is required' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+      throw new Error('threadId is required');
     }
-
-    // 3. Create admin client
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
 
     // 4. Fetch user's configurations
     const [settingsRes, promptRes, customerRes] = await Promise.all([
@@ -79,8 +74,7 @@ serve(async (req) => {
     formData.append('token', geminiToken);
 
     const geminiResponse = await fetch(gemini_api_url, { method: 'POST', body: formData });
-    const responseText = await geminiResponse.text();
-    const promptLogContent = `--- PROMPT SENT TO AI ---\n${prompt_text}\n\n--- RAW RESPONSE FROM AI ---\n${responseText}`;
+    responseText = await geminiResponse.text();
 
     if (!geminiResponse.ok) {
       throw new Error(`Gemini API call failed with status ${geminiResponse.status}`);
@@ -110,28 +104,32 @@ serve(async (req) => {
     // 10. Create scheduled message on success
     const { error: insertError } = await supabaseAdmin.from('scheduled_messages').insert({
       customer_id: customerId, thread_id: threadId, user_id: userId,
-      content: content, scheduled_at: scheduled_at, prompt_log: promptLogContent, status: 'pending',
+      content: content, scheduled_at: scheduled_at, status: 'pending',
     });
     if (insertError) throw insertError;
 
-    // 11. Return success
+    // 11. Log success
+    await supabaseAdmin.from('ai_prompt_logs').insert({
+      user_id: userId, customer_id: customerId, prompt_sent: prompt_text,
+      raw_response: responseText, status: 'success',
+    });
+
+    // 12. Return success
     return new Response(JSON.stringify({ success: true, message: 'AI has successfully scheduled the message.' }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Error in generate-care-message function:', error);
-    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
     
-    // Attempt to log the failure into the database
-    if (customerId && threadId && userId) {
-      const responseText = error.message.includes('RAW RESPONSE FROM AI') ? '' : 'AI response could not be captured before the error.';
-      const promptLogContent = `--- PROMPT SENT TO AI ---\n${prompt_text || 'Prompt could not be captured before the error.'}\n\n--- RAW RESPONSE FROM AI ---\n${responseText}`;
-      
-      await supabaseAdmin.from('scheduled_messages').insert({
-        customer_id: customerId, thread_id: threadId, user_id: userId,
-        content: `Lỗi AI: ${error.message}`, scheduled_at: new Date().toISOString(),
-        prompt_log: promptLogContent, status: 'failed',
+    // Always attempt to log the failure
+    if (userId && customerId) {
+      await supabaseAdmin.from('ai_prompt_logs').insert({
+        user_id: userId, customer_id: customerId,
+        prompt_sent: prompt_text || 'Prompt could not be captured before the error.',
+        raw_response: responseText || 'AI response could not be captured.',
+        status: 'failed',
+        error_message: error.message,
       });
     }
 
