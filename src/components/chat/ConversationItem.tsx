@@ -47,9 +47,9 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold text-sm truncate">{customerName}</h3>
-            <span className="text-xs text-gray-500 whitespace-nowrap">{timeAgo}</span>
+          <div className="flex justify-between items-center gap-2">
+            <h3 className="font-semibold text-sm truncate min-w-0">{customerName}</h3>
+            <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">{timeAgo}</span>
           </div>
           <div className="flex justify-between items-start mt-1">
             <p className="text-xs text-gray-500 truncate pr-2">
