@@ -223,7 +223,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-1 border border-orange-500">
             <TabsTrigger
               value="info"
-              className="flex items-center justify-center gap-2 rounded-md p-2 border-0 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+              className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"
             >
               <div className="rounded-md bg-blue-100 p-1.5">
                 <UserCircle className="h-5 w-5 text-blue-600" />
@@ -232,7 +232,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             </TabsTrigger>
             <TabsTrigger
               value="care"
-              className="flex items-center justify-center gap-2 rounded-md p-2 border-0 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+              className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"
             >
               <div className="rounded-md bg-orange-100 p-1.5">
                 <Sparkles className="h-5 w-5 text-orange-500" />
