@@ -223,7 +223,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-1 border border-orange-500">
             <TabsTrigger
               value="info"
-              className="flex items-center justify-center gap-2 rounded-md p-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+              className="flex items-center justify-center gap-2 rounded-md p-2 border-0 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
             >
               <div className="rounded-md bg-blue-100 p-1.5">
                 <UserCircle className="h-5 w-5 text-blue-600" />
@@ -232,7 +232,7 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             </TabsTrigger>
             <TabsTrigger
               value="care"
-              className="flex items-center justify-center gap-2 rounded-md p-2 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
+              className="flex items-center justify-center gap-2 rounded-md p-2 border-0 data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600"
             >
               <div className="rounded-md bg-orange-100 p-1.5">
                 <Sparkles className="h-5 w-5 text-orange-500" />
@@ -242,145 +242,146 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           </TabsList>
         </div>
 
-        <TabsContent value="info" className="flex-1 flex flex-col min-h-0 mt-0">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-600 mb-2">Thông tin liên hệ</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Mail className="w-4 h-4 text-gray-400" />
-                  <span>Chưa có email</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-700">
-                  <Phone className="w-4 h-4 text-gray-400" />
-                  <span>Chưa có SĐT</span>
-                </div>
-              </div>
-            </div>
-            <Separator />
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600">
-                  <TagIcon className="w-4 h-4" />
-                  Tags
-                </h4>
-                <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="justify-start text-muted-foreground">
-                      <PlusCircle className="w-4 h-4 mr-2" />
-                      Thêm tag...
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0 w-[220px]" align="start">
-                    <Command>
-                      <CommandInput placeholder="Tìm kiếm tag..." />
-                      <CommandList>
-                        <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
-                        <CommandGroup>
-                          {isLoadingTags ? (
-                            <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
-                          ) : (
-                            unassignedTags?.map((tag) => {
-                              const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-                              return (
-                                <CommandItem
-                                  key={tag.id}
-                                  onSelect={() => {
-                                    addTagMutation.mutate(tag.id);
-                                    setIsTagPopoverOpen(false);
-                                  }}
-                                  className="cursor-pointer"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
-                                      <Icon className="w-3 h-3" />
-                                    </div>
-                                    <span>{tag.name}</span>
-                                  </div>
-                                </CommandItem>
-                              );
-                            })
-                          )}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {assignedTags.map((tag) => {
-                  const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-                  return (
-                    <Badge key={tag.id} className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", tag.color, "text-white")}>
-                      <Icon className="w-3 h-3" />
-                      {tag.name}
-                      <button
-                        onClick={() => removeTagMutation.mutate(tag.id)}
-                        className="rounded-full hover:bg-black/20 p-0.5"
-                        disabled={removeTagMutation.isPending}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-            <Separator />
-            <div>
-              <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3">
-                <Notebook className="w-4 h-4" />
-                Ghi chú
-              </h4>
-              <div className="space-y-2">
-                {isLoadingNotes ? (
-                  <div className="space-y-3">
-                    <Skeleton className="h-12 w-full" />
-                    <Skeleton className="h-12 w-4/5" />
-                  </div>
-                ) : notes && notes.length > 0 ? (
-                  notes.map((note, index) => (
-                    <div key={note.id} className="group">
-                      <NoteItem
-                        note={note}
-                        isNewest={index === 0}
-                        onUpdate={handleUpdateNote}
-                        onDelete={handleDeleteNoteClick}
-                        isUpdating={updateNoteMutation.isPending && updateNoteMutation.variables?.noteId === note.id}
-                      />
+        <div className="flex-1 relative mt-2">
+            <TabsContent value="info" className="absolute inset-0 flex flex-col">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-600 mb-2">Thông tin liên hệ</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span>Chưa có email</span>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>
-                )}
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span>Chưa có SĐT</span>
+                    </div>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                      <TagIcon className="w-4 h-4" />
+                      Tags
+                    </h4>
+                    <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="justify-start text-muted-foreground">
+                          <PlusCircle className="w-4 h-4 mr-2" />
+                          Thêm tag...
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0 w-[220px]" align="start">
+                        <Command>
+                          <CommandInput placeholder="Tìm kiếm tag..." />
+                          <CommandList>
+                            <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
+                            <CommandGroup>
+                              {isLoadingTags ? (
+                                <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
+                              ) : (
+                                unassignedTags?.map((tag) => {
+                                  const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
+                                  return (
+                                    <CommandItem
+                                      key={tag.id}
+                                      onSelect={() => {
+                                        addTagMutation.mutate(tag.id);
+                                        setIsTagPopoverOpen(false);
+                                      }}
+                                      className="cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
+                                          <Icon className="w-3 h-3" />
+                                        </div>
+                                        <span>{tag.name}</span>
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })
+                              )}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {assignedTags.map((tag) => {
+                      const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
+                      return (
+                        <Badge key={tag.id} className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", tag.color, "text-white")}>
+                          <Icon className="w-3 h-3" />
+                          {tag.name}
+                          <button
+                            onClick={() => removeTagMutation.mutate(tag.id)}
+                            className="rounded-full hover:bg-black/20 p-0.5"
+                            disabled={removeTagMutation.isPending}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3">
+                    <Notebook className="w-4 h-4" />
+                    Ghi chú
+                  </h4>
+                  <div className="space-y-2">
+                    {isLoadingNotes ? (
+                      <div className="space-y-3">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-4/5" />
+                      </div>
+                    ) : notes && notes.length > 0 ? (
+                      notes.map((note, index) => (
+                        <div key={note.id} className="group">
+                          <NoteItem
+                            note={note}
+                            isNewest={index === 0}
+                            onUpdate={handleUpdateNote}
+                            onDelete={handleDeleteNoteClick}
+                            isUpdating={updateNoteMutation.isPending && updateNoteMutation.variables?.noteId === note.id}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="p-4 border-t bg-white">
+                <Textarea
+                  placeholder="Thêm ghi chú... (Enter để gửi)"
+                  rows={2}
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  onKeyDown={handleNoteKeyDown}
+                  disabled={addNoteMutation.isPending}
+                />
+              </div>
+            </TabsContent>
 
-          <div className="p-4 border-t bg-white">
-            <Textarea
-              placeholder="Thêm ghi chú... (Enter để gửi)"
-              rows={2}
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              onKeyDown={handleNoteKeyDown}
-              disabled={addNoteMutation.isPending}
-            />
-          </div>
-        </TabsContent>
-
-        <TabsContent value="care" className="flex-1 flex flex-col min-h-0 mt-0">
-          {conversation.customer ? (
-            <CareTab 
-              customerId={conversation.customer.id} 
-              threadId={conversation.id} 
-            />
-          ) : (
-            <div className="p-4">
-              <p className="text-sm text-gray-500">Không thể lên lịch cho khách hàng này.</p>
-            </div>
-          )}
-        </TabsContent>
+            <TabsContent value="care" className="absolute inset-0">
+              {conversation.customer ? (
+                <CareTab 
+                  customerId={conversation.customer.id} 
+                  threadId={conversation.id} 
+                />
+              ) : (
+                <div className="p-4">
+                  <p className="text-sm text-gray-500">Không thể lên lịch cho khách hàng này.</p>
+                </div>
+              )}
+            </TabsContent>
+        </div>
       </Tabs>
       
       <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
