@@ -20,7 +20,7 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
-  const truncatePreview = (text: string | null, wordLimit: number): string => {
+  const truncateByWord = (text: string | null, wordLimit: number): string => {
     if (!text) {
       return '';
     }
@@ -31,7 +31,8 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     return text;
   };
 
-  const messagePreview = truncatePreview(conversation.last_message_preview, 9);
+  const messagePreview = truncateByWord(conversation.last_message_preview, 9);
+  const truncatedCustomerName = truncateByWord(customerName, 3);
 
   return (
     <div
@@ -48,7 +49,7 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
         </Avatar>
         <div className="flex-1 overflow-hidden">
           <div className="flex justify-between items-center gap-2">
-            <h3 className="font-semibold text-sm truncate min-w-0">{customerName}</h3>
+            <h3 className="font-semibold text-sm truncate min-w-0">{truncatedCustomerName}</h3>
             <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">{timeAgo}</span>
           </div>
           <div className="flex justify-between items-start mt-1">
