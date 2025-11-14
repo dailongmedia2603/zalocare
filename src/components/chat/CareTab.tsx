@@ -116,8 +116,16 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
         throw new Error('Đã có lịch chăm sóc đang chờ. AI sẽ không tạo thêm.');
       }
 
-      // Reverted to the default invoke method which handles auth automatically
+      // Explicitly get the session to ensure the Authorization header is correctly passed.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Không thể xác thực người dùng. Vui lòng đăng nhập lại.');
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-care-message', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: { threadId },
       });
 

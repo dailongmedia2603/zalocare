@@ -27,7 +27,15 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
     mutationFn: async ({ newMessage, newImageUrl }: { newMessage: string, newImageUrl: string }) => {
       if (!conversation) throw new Error("Không có cuộc trò chuyện nào được chọn");
 
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !session) {
+        throw new Error('Không thể xác thực người dùng. Vui lòng đăng nhập lại.');
+      }
+
       const { error, data } = await supabase.functions.invoke('send-n8n-message', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: {
           threadId: conversation.id,
           message: newMessage,
