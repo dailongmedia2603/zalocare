@@ -103,9 +103,23 @@ serve(async (req) => {
       throw new Error(`Gemini API call failed: ${errorText}`);
     }
 
-    const result = await geminiResponse.json();
+    // 8. Robustly parse the Gemini response
+    const responseText = await geminiResponse.text();
+    let result;
+    try {
+      // Try to find and parse JSON from within a markdown block
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch && jsonMatch[1]) {
+        result = JSON.parse(jsonMatch[1]);
+      } else {
+        // If no markdown, try to parse the whole text
+        result = JSON.parse(responseText);
+      }
+    } catch (e) {
+      throw new Error(`Could not parse JSON from Gemini response. Raw response: ${responseText}`);
+    }
 
-    // 8. STRICTLY validate Gemini response and create scheduled message
+    // 9. STRICTLY validate the parsed JSON and create scheduled message
     const { content, scheduled_at } = result;
 
     if (!content || !scheduled_at) {
@@ -125,7 +139,7 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // 9. Return success
+    // 10. Return success
     return new Response(JSON.stringify({ success: true, message: 'AI has successfully scheduled the message.' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
