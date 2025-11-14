@@ -116,16 +116,8 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
         throw new Error('Đã có lịch chăm sóc đang chờ. AI sẽ không tạo thêm.');
       }
 
-      // **THE FIX**: Manually get the latest session token to prevent "Unauthorized" error.
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.");
-      }
-
+      // Reverted to the default invoke method which handles auth automatically
       const { data, error } = await supabase.functions.invoke('generate-care-message', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
         body: { threadId },
       });
 
