@@ -21,7 +21,6 @@ serve(async (req) => {
       })
     }
 
-    // Lấy token từ biến môi trường (secrets)
     const geminiToken = Deno.env.get('GEMINI_API_TOKEN');
     if (!geminiToken) {
       return new Response(JSON.stringify({ 
@@ -36,18 +35,15 @@ serve(async (req) => {
 
     const testPrompt = prompt || 'Nguyễn Quang Hải là ai ?';
 
-    // Thêm token vào nội dung gửi đi
-    const body = new URLSearchParams({
-      prompt: testPrompt,
-      token: geminiToken,
-    });
+    // Sử dụng FormData để gửi yêu cầu multipart/form-data
+    const formData = new FormData();
+    formData.append('prompt', testPrompt);
+    formData.append('token', geminiToken);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body,
+      // Không cần set Content-Type, fetch sẽ tự động làm điều đó cho FormData
+      body: formData,
     });
 
     // If it's a connection test (no prompt sent from client), return simple status

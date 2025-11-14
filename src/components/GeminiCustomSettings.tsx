@@ -87,7 +87,18 @@ const GeminiCustomSettings = () => {
         setConnectionStatus('error');
       }
     } catch (error: any) {
-      showError(`Lỗi khi kiểm tra kết nối: ${error.message || 'Vui lòng kiểm tra lại URL.'}`);
+      let detailedMessage = 'Lỗi không xác định. Vui lòng kiểm tra lại URL và cấu hình.';
+      if (error.context && typeof error.context.json === 'function') {
+        try {
+          const errorJson = await error.context.json();
+          detailedMessage = errorJson.details || errorJson.message || JSON.stringify(errorJson);
+        } catch (e) {
+          detailedMessage = error.message || 'Không thể phân tích phản hồi lỗi từ server.';
+        }
+      } else {
+        detailedMessage = error.message || 'Edge Function returned a non-2xx status code.';
+      }
+      showError(`Kết nối thất bại: ${detailedMessage}`);
       setConnectionStatus('error');
       console.error('Function Invoke Error:', error);
     } finally {
