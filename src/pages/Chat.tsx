@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import InboxPanel from '@/components/chat/InboxPanel';
 import ConversationPanel from '@/components/chat/ConversationPanel';
 import CustomerInfoPanel from '@/components/chat/CustomerInfoPanel';
@@ -8,16 +9,24 @@ import { Skeleton } from '@/components/ui/skeleton';
 const Chat = () => {
   // This custom hook sets up the real-time subscription for the entire chat interface.
   useChatSubscription();
-
+  
+  const location = useLocation();
+  const navigate = useNavigate();
   const { data: conversations, isLoading } = useConversations();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Auto-select the first conversation when data loads or changes.
+  // Auto-select the first conversation or the one from navigation state.
   useEffect(() => {
-    if (!selectedConversationId && conversations && conversations.length > 0) {
+    const conversationIdFromState = location.state?.selectedConversationId;
+
+    if (conversationIdFromState) {
+      setSelectedConversationId(conversationIdFromState);
+      // Clear the state to prevent re-selection on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    } else if (!selectedConversationId && conversations && conversations.length > 0) {
       setSelectedConversationId(conversations[0].id);
     }
-  }, [conversations, selectedConversationId]);
+  }, [conversations, selectedConversationId, location.state, navigate, location.pathname]);
 
   const selectedConversation = conversations?.find(c => c.id === selectedConversationId) || null;
 

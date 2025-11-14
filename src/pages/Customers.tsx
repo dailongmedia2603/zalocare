@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Table,
   TableBody,
@@ -16,23 +17,28 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, MoreHorizontal, ArrowUpDown, Users, UserPlus, MessageSquare } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, Users, UserPlus, MessageSquare, Trash2, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { showSuccess, showError } from '@/utils/toast';
 
 // Define the customer type based on the database schema
 interface Customer {
@@ -82,8 +88,10 @@ const useCustomers = (page: number, pageSize: number, dateRange?: DateRange) => 
 
 const Customers = () => {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [date, setDate] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
   const pageSize = 7;
 
   const { data, isLoading, isError } = useCustomers(page, pageSize, date);
@@ -110,6 +118,30 @@ const Customers = () => {
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (customerId: string) => {
+      const { error } = await supabase.from('customers').delete().eq('id', customerId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      showSuccess('Đã xóa khách hàng!');
+      setCustomerToDelete(null);
+    },
+    onError: (error: Error) => {
+      showError(`Lỗi khi xóa: ${error.message}`);
+      setCustomerToDelete(null);
+    },
+  });
+
+  const handleSendMessage = (customer: Customer) => {
+    navigate('/', { state: { selectedConversationId: customer.zalo_id } });
+  };
+
+  const handleDeleteClick = (customer: Customer) => {
+    setCustomerToDelete(customer);
+  };
 
   const customers = data?.customers || [];
   const totalCustomers = data?.count || 0;
@@ -227,7 +259,7 @@ const Customers = () => {
                 <TableRow key={i} className="border-b-0">
                   <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                  <TableCell className="pr-6"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  <TableCell className="pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : isError ? (
@@ -261,19 +293,14 @@ const Customers = () => {
                   </TableCell>
                   <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd/MM/yyyy")}</TableCell>
                   <TableCell className="text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Mở menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Xem chi tiết</DropdownMenuItem>
-                        <DropdownMenuItem>Gửi tin nhắn</DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-500 focus:text-red-500 focus:bg-red-50">Xóa</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendMessage(customer)}>
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(customer)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -290,6 +317,27 @@ const Customers = () => {
           {renderPagination()}
         </Pagination>
       </div>
+
+      <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Khách hàng "{customerToDelete?.display_name}" sẽ bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => customerToDelete && deleteCustomerMutation.mutate(customerToDelete.id)}
+              disabled={deleteCustomerMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleteCustomerMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
