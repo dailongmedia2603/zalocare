@@ -266,7 +266,8 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
                 key={msg.id}
                 className={cn(
                   'p-3 rounded-lg border',
-                  msg.status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50/80'
+                  msg.status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 
+                  msg.status === 'failed' ? 'bg-red-50 border-red-200' : 'bg-gray-50/80'
                 )}
               >
                 <div className="flex items-start gap-3">
@@ -286,7 +287,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" size="sm" className="mt-2 -ml-3 text-xs text-gray-500">
                           <FileText className="w-3.5 h-3.5 mr-1.5" />
-                          Xem Prompt đã gửi cho AI
+                          Xem Log Chi Tiết
                         </Button>
                       </CollapsibleTrigger>
                     )}
