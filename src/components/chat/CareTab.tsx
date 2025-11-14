@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { ScheduledMessage } from '@/types/chat';
@@ -46,6 +46,31 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
 
   const { data: scheduledMessages, isLoading } = useScheduledMessages(customerId);
 
+  // Lắng nghe thay đổi realtime từ Supabase
+  useEffect(() => {
+    const channel = supabase
+      .channel(`scheduled-messages-${customerId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'scheduled_messages',
+          filter: `customer_id=eq.${customerId}`,
+        },
+        () => {
+          // Khi có thay đổi, làm mới lại dữ liệu
+          queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
+        }
+      )
+      .subscribe();
+
+    // Dọn dẹp subscription khi component bị unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient, customerId]);
+
   const addMessageMutation = useMutation({
     mutationFn: async (newMessage: Omit<ScheduledMessage, 'id' | 'user_id' | 'status' | 'created_at'>) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -54,7 +79,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
+      // Không cần invalidate ở đây vì realtime sẽ xử lý
       showSuccess('Đã lên lịch gửi tin nhắn!');
       setContent('');
       setImageUrl('');
@@ -68,7 +93,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
+      // Không cần invalidate ở đây vì realtime sẽ xử lý
       showSuccess('Đã xóa lịch gửi!');
     },
     onError: (error: Error) => showError(`Lỗi: ${error.message}`),
