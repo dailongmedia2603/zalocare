@@ -118,53 +118,41 @@ export const useChatSubscription = () => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
-        const channel = supabase
-            .channel('realtime-chat-v2') // Using a new channel name to avoid potential conflicts
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'zalo_events' },
-                (payload: any) => {
-                    // Invalidate the main conversations list to update previews, order, etc.
-                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        // Define a handler for Zalo event changes
+        const handleZaloEventChange = (payload: any) => {
+            // Invalidate the main conversations list to update previews, order, etc.
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
 
-                    // Invalidate messages for the specific conversation that received an update
-                    const threadId = payload.new?.threadId || payload.old?.threadId;
-                    if (threadId) {
-                        queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
-                    } else {
-                        // As a fallback, invalidate all message queries if threadId isn't in the payload
-                        queryClient.invalidateQueries({ queryKey: ['messages'] });
-                    }
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'customers' },
-                () => {
-                    // If customer info (like name or avatar) changes, refetch conversations
-                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'customer_tags' },
-                () => {
-                    // If tags are added or removed, refetch conversations to display them
-                    queryClient.invalidateQueries({ queryKey: ['conversations'] });
-                }
-            )
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'notes' },
-                (payload: any) => {
-                    const customerId = payload.new?.customer_id || payload.old?.customer_id;
-                    if (customerId) {
-                        queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
-                    } else {
-                        queryClient.invalidateQueries({ queryKey: ['notes'] });
-                    }
-                }
-            )
+            // Invalidate messages for the specific conversation that received an update
+            const threadId = payload.new?.threadId || payload.old?.threadId;
+            if (threadId) {
+                queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+            }
+        };
+
+        // Define a handler for customer/tag changes
+        const handleCustomerDataChange = () => {
+            // If customer info (like name or avatar) or tags change, refetch conversations
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        };
+
+        // Define a handler for note changes
+        const handleNoteChange = (payload: any) => {
+            const customerId = payload.new?.customer_id || payload.old?.customer_id;
+            if (customerId) {
+                queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+            }
+        };
+
+        // Use a unique channel name to avoid potential conflicts
+        const channel = supabase.channel('zalo-chat-realtime-updates');
+
+        // Subscribe to all relevant table changes
+        channel
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleZaloEventChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleCustomerDataChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleCustomerDataChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleNoteChange)
             .subscribe();
 
         // Cleanup function to remove the subscription when the component unmounts
