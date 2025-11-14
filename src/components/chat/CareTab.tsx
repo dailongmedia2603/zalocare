@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Image as ImageIcon, Send, Trash2, Loader2, Clock, Bell, X, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Image as ImageIcon, Send, Trash2, Loader2, Clock, Bell, X, Sparkles, FileText } from 'lucide-react';
 import { format, set } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,11 @@ import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface CareTabProps {
   customerId: string;
@@ -257,36 +262,55 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
           scheduledMessages.map((msg) => {
             const currentStatus = statusConfig[msg.status as keyof typeof statusConfig] || { label: msg.status, className: 'bg-gray-400' };
             return (
-              <div
+              <Collapsible
                 key={msg.id}
                 className={cn(
-                  'p-3 rounded-lg border flex items-start gap-3',
+                  'p-3 rounded-lg border',
                   msg.status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50/80'
                 )}
               >
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
-                      <Clock className="w-4 h-4 text-orange-500" />
-                      {format(new Date(msg.scheduled_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        {format(new Date(msg.scheduled_at), 'HH:mm, dd/MM/yyyy', { locale: vi })}
+                      </div>
+                      <Badge className={cn("border-transparent", currentStatus.className)}>
+                        {currentStatus.label}
+                      </Badge>
                     </div>
-                    <Badge className={cn("border-transparent", currentStatus.className)}>
-                      {currentStatus.label}
-                    </Badge>
+                    {msg.content && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{msg.content}</p>}
+                    {msg.image_url && <img src={msg.image_url} alt="Scheduled" className="mt-2 rounded-md max-w-[100px] max-h-[100px]" />}
+                    {msg.prompt_log && (
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" size="sm" className="mt-2 -ml-3 text-xs text-gray-500">
+                          <FileText className="w-3.5 h-3.5 mr-1.5" />
+                          Xem Prompt đã gửi cho AI
+                        </Button>
+                      </CollapsibleTrigger>
+                    )}
                   </div>
-                  {msg.content && <p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap">{msg.content}</p>}
-                  {msg.image_url && <img src={msg.image_url} alt="Scheduled" className="mt-2 rounded-md max-w-[100px] max-h-[100px]" />}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-red-500 hover:text-red-600"
+                    onClick={() => deleteMessageMutation.mutate(msg.id)}
+                    disabled={deleteMessageMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-red-500 hover:text-red-600"
-                  onClick={() => deleteMessageMutation.mutate(msg.id)}
-                  disabled={deleteMessageMutation.isPending}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+                {msg.prompt_log && (
+                  <CollapsibleContent className="mt-2">
+                    <div className="p-2 bg-gray-100 rounded-md">
+                      <pre className="text-xs text-gray-600 whitespace-pre-wrap break-words font-mono">
+                        {msg.prompt_log}
+                      </pre>
+                    </div>
+                  </CollapsibleContent>
+                )}
+              </Collapsible>
             );
           })
         ) : (
