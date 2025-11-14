@@ -101,9 +101,12 @@ serve(async (req) => {
 
     const result = await geminiResponse.json();
 
-    // 8. Validate Gemini response and create scheduled message
-    if (!result.content || !result.scheduled_at) {
-      throw new Error('Invalid response from Gemini API. Expected "content" and "scheduled_at".');
+    // 8. Validate Gemini response flexibly and create scheduled message
+    const messageContent = result.content || result.answer; // Accept 'content' or 'answer'
+    const scheduledTime = result.scheduled_at || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // Default to 24 hours later
+
+    if (!messageContent) {
+      throw new Error('Invalid response from Gemini API. Expected "content" or "answer".');
     }
 
     const { error: insertError } = await supabaseAdmin
@@ -112,9 +115,9 @@ serve(async (req) => {
         customer_id: customerId,
         thread_id: threadId,
         user_id: user.id,
-        content: result.content,
-        scheduled_at: result.scheduled_at,
-        prompt_log: finalPrompt, // Save the prompt log
+        content: messageContent,
+        scheduled_at: scheduledTime,
+        prompt_log: finalPrompt, // Save the prompt log for debugging
       });
 
     if (insertError) throw insertError;
