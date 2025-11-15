@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ConversationInboxItem, CustomerNote } from '@/types/chat';
-import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon, Notebook, UserCircle, Sparkles, Edit, Check, XCircle } from 'lucide-react';
+import { PlusCircle, X, Loader2, icons, Tag as TagIcon, Notebook, UserCircle, Sparkles, Edit, Check, XCircle, Users, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Tag } from '@/pages/Tags';
+import { Tag, CustomerSource } from '@/pages/Tags';
 import {
   Popover,
   PopoverContent,
@@ -20,6 +20,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  CommandSeparator,
 } from "@/components/ui/command";
 import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
@@ -40,430 +41,108 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CareTab from './CareTab';
 import { Input } from '../ui/input';
 
-// Fetch all available tags for the user
-const useAvailableTags = () => {
-  return useQuery<Tag[]>({
-    queryKey: ['tags'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('tags').select('*').order('name', { ascending: true });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-  });
-};
-
-// Fetch notes for a specific customer
-const useNotes = (customerId: string | null) => {
-  return useQuery<CustomerNote[]>({
-    queryKey: ['notes', customerId],
-    queryFn: async () => {
-      if (!customerId) return [];
-      const { data, error } = await supabase
-        .from('notes')
-        .select('*')
-        .eq('customer_id', customerId)
-        .order('created_at', { ascending: false });
-      if (error) throw new Error(error.message);
-      return data;
-    },
-    enabled: !!customerId,
-  });
-};
-
 interface CustomerInfoPanelProps {
   conversation: ConversationInboxItem | null;
 }
 
+const useAvailableTags = () => useQuery<Tag[]>({ queryKey: ['tags'], queryFn: async () => { const { data, error } = await supabase.from('tags').select('*').order('name', { ascending: true }); if (error) throw new Error(error.message); return data; } });
+const useAvailableSources = () => useQuery<CustomerSource[]>({ queryKey: ['customer_sources'], queryFn: async () => { const { data, error } = await supabase.from('customer_sources').select('*').order('name', { ascending: true }); if (error) throw new Error(error.message); return data; } });
+const useNotes = (customerId: string | null) => useQuery<CustomerNote[]>({ queryKey: ['notes', customerId], queryFn: async () => { if (!customerId) return []; const { data, error } = await supabase.from('notes').select('*').eq('customer_id', customerId).order('created_at', { ascending: false }); if (error) throw new Error(error.message); return data; }, enabled: !!customerId });
+
 const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
   const queryClient = useQueryClient();
   const [isTagPopoverOpen, setIsTagPopoverOpen] = useState(false);
+  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<CustomerNote | null>(null);
   const { data: availableTags, isLoading: isLoadingTags } = useAvailableTags();
+  const { data: availableSources, isLoading: isLoadingSources } = useAvailableSources();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState('');
 
   const customerId = conversation?.customer?.id;
   const customerName = conversation?.customer?.display_name || 'Khách hàng mới';
 
-  useEffect(() => {
-    if (conversation) {
-      setEditedName(customerName);
-      setIsEditingName(false); // Reset editing state on conversation change
-    }
-  }, [conversation, customerName]);
+  const { data: customerDetails } = useQuery<{ source: CustomerSource | null }, Error>({
+    queryKey: ['customerWithSource', customerId],
+    queryFn: async () => {
+      if (!customerId) return { source: null };
+      const { data, error } = await supabase.from('customers').select('source:customer_sources(*)').eq('id', customerId).single();
+      if (error) throw error;
+      return data as unknown as { source: CustomerSource | null };
+    },
+    enabled: !!customerId,
+  });
+  const assignedSource = customerDetails?.source;
+
+  useEffect(() => { if (conversation) { setEditedName(customerName); setIsEditingName(false); } }, [conversation, customerName]);
 
   const { data: notes, isLoading: isLoadingNotes } = useNotes(customerId || null);
 
-  const addTagMutation = useMutation({
-    mutationFn: async (tagId: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !customerId) throw new Error("User or customer not found");
-      const { error } = await supabase.from('customer_tags').insert({
-        customer_id: customerId,
-        tag_id: tagId,
-        user_id: user.id,
-      });
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      showSuccess("Đã thêm tag!");
-    },
-    onError: (error) => showError(error.message),
-  });
+  const addTagMutation = useMutation({ mutationFn: async (tagId: string) => { const { data: { user } } = await supabase.auth.getUser(); if (!user || !customerId) throw new Error("User or customer not found"); const { error } = await supabase.from('customer_tags').insert({ customer_id: customerId, tag_id: tagId, user_id: user.id }); if (error) throw new Error(error.message); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conversations'] }); showSuccess("Đã thêm tag!"); }, onError: (error) => showError(error.message) });
+  const removeTagMutation = useMutation({ mutationFn: async (tagId: string) => { if (!customerId) throw new Error("Customer not found"); const { error } = await supabase.from('customer_tags').delete().eq('customer_id', customerId).eq('tag_id', tagId); if (error) throw new Error(error.message); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['conversations'] }); showSuccess("Đã xóa tag!"); }, onError: (error) => showError(error.message) });
+  const addNoteMutation = useMutation({ mutationFn: async (content: string) => { const { data: { user } } = await supabase.auth.getUser(); if (!user || !customerId) throw new Error("User or customer not found"); const { error } = await supabase.from('notes').insert({ customer_id: customerId, user_id: user.id, content: content }); if (error) throw new Error(error.message); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['notes', customerId] }); setNewNote(''); showSuccess("Đã thêm ghi chú!"); }, onError: (error) => showError(error.message) });
+  const updateNoteMutation = useMutation({ mutationFn: async ({ noteId, content }: { noteId: string, content: string }) => { const { error } = await supabase.from('notes').update({ content, updated_at: new Date().toISOString() }).eq('id', noteId); if (error) throw new Error(error.message); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['notes', customerId] }); showSuccess("Đã cập nhật ghi chú!"); }, onError: (error) => showError(`Lỗi: ${error.message}`) });
+  const deleteNoteMutation = useMutation({ mutationFn: async (noteId: string) => { const { error } = await supabase.from('notes').delete().eq('id', noteId); if (error) throw new Error(error.message); }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['notes', customerId] }); showSuccess("Đã xóa ghi chú!"); setIsDeleteConfirmOpen(false); setNoteToDelete(null); }, onError: (error) => showError(`Lỗi: ${error.message}`) });
+  const updateNameMutation = useMutation({ mutationFn: async (newName: string) => { if (!customerId) throw new Error("Customer ID not found"); const { error } = await supabase.from('customers').update({ display_name: newName }).eq('id', customerId); if (error) throw new Error(error.message); }, onSuccess: () => { showSuccess("Tên khách hàng đã được cập nhật!"); setIsEditingName(false); queryClient.invalidateQueries({ queryKey: ['conversations'] }); }, onError: (error: Error) => showError(`Lỗi: ${error.message}`) });
+  const updateSourceMutation = useMutation({ mutationFn: async (sourceId: string | null) => { if (!customerId) throw new Error("Customer not found"); const { error } = await supabase.from('customers').update({ source_id: sourceId }).eq('id', customerId); if (error) throw error; }, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['customerWithSource', customerId] }); showSuccess("Đã cập nhật nguồn khách hàng!"); setIsSourcePopoverOpen(false); }, onError: (error: Error) => showError(`Lỗi: ${error.message}`) });
 
-  const removeTagMutation = useMutation({
-    mutationFn: async (tagId: string) => {
-      if (!customerId) throw new Error("Customer not found");
-      const { error } = await supabase.from('customer_tags')
-        .delete()
-        .eq('customer_id', customerId)
-        .eq('tag_id', tagId);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      showSuccess("Đã xóa tag!");
-    },
-    onError: (error) => showError(error.message),
-  });
+  const handleNameSave = () => { if (editedName.trim() && editedName.trim() !== customerName) { updateNameMutation.mutate(editedName.trim()); } else { setIsEditingName(false); } };
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (newNote.trim()) { addNoteMutation.mutate(newNote.trim()); } } };
+  const handleUpdateNote = async (noteId: string, content: string) => { await updateNoteMutation.mutateAsync({ noteId, content }); };
+  const handleDeleteNoteClick = (note: CustomerNote) => { setNoteToDelete(note); setIsDeleteConfirmOpen(true); };
 
-  const addNoteMutation = useMutation({
-    mutationFn: async (content: string) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !customerId) throw new Error("User or customer not found");
-      const { error } = await supabase.from('notes').insert({
-        customer_id: customerId,
-        user_id: user.id,
-        content: content,
-      });
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
-      setNewNote('');
-      showSuccess("Đã thêm ghi chú!");
-    },
-    onError: (error) => showError(error.message),
-  });
-
-  const updateNoteMutation = useMutation({
-    mutationFn: async ({ noteId, content }: { noteId: string, content: string }) => {
-      const { error } = await supabase
-        .from('notes')
-        .update({ content, updated_at: new Date().toISOString() })
-        .eq('id', noteId);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
-      showSuccess("Đã cập nhật ghi chú!");
-    },
-    onError: (error) => showError(`Lỗi: ${error.message}`),
-  });
-
-  const deleteNoteMutation = useMutation({
-    mutationFn: async (noteId: string) => {
-      const { error } = await supabase.from('notes').delete().eq('id', noteId);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
-      showSuccess("Đã xóa ghi chú!");
-      setIsDeleteConfirmOpen(false);
-      setNoteToDelete(null);
-    },
-    onError: (error) => showError(`Lỗi: ${error.message}`),
-  });
-
-  const updateNameMutation = useMutation({
-    mutationFn: async (newName: string) => {
-      if (!customerId) throw new Error("Customer ID not found");
-      const { error } = await supabase
-        .from('customers')
-        .update({ display_name: newName })
-        .eq('id', customerId);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      showSuccess("Tên khách hàng đã được cập nhật!");
-      setIsEditingName(false);
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
-    },
-    onError: (error: Error) => {
-      showError(`Lỗi: ${error.message}`);
-    }
-  });
-
-  const handleNameSave = () => {
-    if (editedName.trim() && editedName.trim() !== customerName) {
-      updateNameMutation.mutate(editedName.trim());
-    } else {
-      setIsEditingName(false);
-    }
-  };
-
-  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (newNote.trim()) {
-        addNoteMutation.mutate(newNote.trim());
-      }
-    }
-  };
-
-  const handleUpdateNote = async (noteId: string, content: string) => {
-    await updateNoteMutation.mutateAsync({ noteId, content });
-  };
-
-  const handleDeleteNoteClick = (note: CustomerNote) => {
-    setNoteToDelete(note);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  if (!conversation) {
-    return <div className="w-[360px] border-l bg-gray-50"></div>;
-  }
-
-  if (!conversation.customer) {
-    return (
-      <div className="w-[360px] border-l flex flex-col items-center justify-center p-4 text-center">
-        <Avatar className="w-20 h-20 mx-auto">
-          <AvatarImage src={'/placeholder.svg'} />
-          <AvatarFallback>?</AvatarFallback>
-        </Avatar>
-        <h3 className="mt-3 font-bold text-lg">Khách hàng mới</h3>
-        <p className="text-sm text-gray-500">Thông tin chi tiết sẽ được cập nhật sau.</p>
-      </div>
-    );
-  }
+  if (!conversation) return <div className="w-[360px] border-l bg-gray-50"></div>;
+  if (!conversation.customer) return <div className="w-[360px] border-l flex flex-col items-center justify-center p-4 text-center"><Avatar className="w-20 h-20 mx-auto"><AvatarImage src={'/placeholder.svg'} /><AvatarFallback>?</AvatarFallback></Avatar><h3 className="mt-3 font-bold text-lg">Khách hàng mới</h3><p className="text-sm text-gray-500">Thông tin chi tiết sẽ được cập nhật sau.</p></div>;
 
   const { customer, tags: assignedTags } = conversation;
-  const unassignedTags = availableTags?.filter(
-    (at) => !assignedTags.some((st) => st.id === at.id)
-  );
+  const unassignedTags = availableTags?.filter((at) => !assignedTags.some((st) => st.id === at.id));
 
   return (
     <div className="w-[360px] border-l flex flex-col h-full bg-white">
       <div className="p-4 text-center border-b">
-        <Avatar className="w-20 h-20 mx-auto">
-          <AvatarImage src={customer.avatar_url || '/placeholder.svg'} />
-          <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
-        </Avatar>
-        {isEditingName ? (
-          <div className="flex items-center gap-2 mt-3 justify-center">
-            <Input 
-              value={editedName} 
-              onChange={(e) => setEditedName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleNameSave() }}
-              className="h-8 text-lg text-center font-bold"
-              autoFocus
-            />
-            <Button size="icon" className="h-8 w-8" onClick={handleNameSave} disabled={updateNameMutation.isPending}>
-              {updateNameMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-            </Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingName(false)}>
-              <XCircle className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1 mt-3 justify-center group">
-            <h3 className="font-bold text-lg">{customerName}</h3>
-            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setIsEditingName(true)}>
-              <Edit className="h-4 w-4 text-gray-500" />
-            </Button>
-          </div>
-        )}
+        <Avatar className="w-20 h-20 mx-auto"><AvatarImage src={customer.avatar_url || '/placeholder.svg'} /><AvatarFallback>{customerName.charAt(0)}</AvatarFallback></Avatar>
+        {isEditingName ? <div className="flex items-center gap-2 mt-3 justify-center"><Input value={editedName} onChange={(e) => setEditedName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleNameSave() }} className="h-8 text-lg text-center font-bold" autoFocus /><Button size="icon" className="h-8 w-8" onClick={handleNameSave} disabled={updateNameMutation.isPending}>{updateNameMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}</Button><Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingName(false)}><XCircle className="h-4 w-4" /></Button></div> : <div className="flex items-center gap-1 mt-3 justify-center group"><h3 className="font-bold text-lg">{customerName}</h3><Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setIsEditingName(true)}><Edit className="h-4 w-4 text-gray-500" /></Button></div>}
       </div>
-
       <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
-        <div className="px-4 pt-4">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-1 border border-orange-500">
-            <TabsTrigger
-              value="info"
-              className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"
-            >
-              <div className="rounded-md bg-blue-100 p-1.5">
-                <UserCircle className="h-5 w-5 text-blue-600" />
-              </div>
-              <span className="font-semibold">Thông tin</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="care"
-              className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"
-            >
-              <div className="rounded-md bg-orange-100 p-1.5">
-                <Sparkles className="h-5 w-5 text-orange-500" />
-              </div>
-              <span className="font-semibold">Chăm sóc</span>
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
+        <div className="px-4 pt-4"><TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-lg bg-transparent p-1 border border-orange-500"><TabsTrigger value="info" className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"><div className="rounded-md bg-blue-100 p-1.5"><UserCircle className="h-5 w-5 text-blue-600" /></div><span className="font-semibold">Thông tin</span></TabsTrigger><TabsTrigger value="care" className="flex items-center justify-center gap-2 rounded-md p-2 border border-transparent data-[state=active]:bg-orange-50 data-[state=active]:text-orange-600 data-[state=active]:border-orange-200"><div className="rounded-md bg-orange-100 p-1.5"><Sparkles className="h-5 w-5 text-orange-500" /></div><span className="font-semibold">Chăm sóc</span></TabsTrigger></TabsList></div>
         <div className="flex-1 relative mt-2">
-            <TabsContent value="info" className="absolute inset-0 flex flex-col">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-600 mb-2">Thông tin liên hệ</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Mail className="w-4 h-4 text-gray-400" />
-                      <span>Chưa có email</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Phone className="w-4 h-4 text-gray-400" />
-                      <span>Chưa có SĐT</span>
-                    </div>
+          <TabsContent value="info" className="absolute inset-0 flex flex-col">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div>
+                <h4 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2"><Users className="w-4 h-4" />Nguồn khách hàng</h4>
+                {assignedSource ? (
+                  <div className="flex items-center gap-2">
+                    <Badge className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", assignedSource.color, "text-white")}><Users className="w-3 h-3" />{assignedSource.name}</Badge>
+                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-7">Thay đổi</Button></PopoverTrigger>{/* Popover Content */}</Popover>
                   </div>
-                </div>
-                <Separator />
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600">
-                      <TagIcon className="w-4 h-4" />
-                      Tags
-                    </h4>
-                    <Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="justify-start text-muted-foreground">
-                          <PlusCircle className="w-4 h-4 mr-2" />
-                          Thêm tag...
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 w-[220px]" align="start">
-                        <Command>
-                          <CommandInput placeholder="Tìm kiếm tag..." />
-                          <CommandList>
-                            <CommandEmpty>Không tìm thấy tag.</CommandEmpty>
-                            <CommandGroup>
-                              {isLoadingTags ? (
-                                <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div>
-                              ) : (
-                                unassignedTags?.map((tag) => {
-                                  const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-                                  return (
-                                    <CommandItem
-                                      key={tag.id}
-                                      onSelect={() => {
-                                        addTagMutation.mutate(tag.id);
-                                        setIsTagPopoverOpen(false);
-                                      }}
-                                      className="cursor-pointer"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}>
-                                          <Icon className="w-3 h-3" />
-                                        </div>
-                                        <span>{tag.name}</span>
-                                      </div>
-                                    </CommandItem>
-                                  );
-                                })
-                              )}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {assignedTags.map((tag) => {
-                      const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-                      return (
-                        <Badge key={tag.id} className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", tag.color, "text-white")}>
-                          <Icon className="w-3 h-3" />
-                          {tag.name}
-                          <button
-                            onClick={() => removeTagMutation.mutate(tag.id)}
-                            className="rounded-full hover:bg-black/20 p-0.5"
-                            disabled={removeTagMutation.isPending}
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-                <Separator />
-                <div>
-                  <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3">
-                    <Notebook className="w-4 h-4" />
-                    Ghi chú
-                  </h4>
-                  <div className="space-y-2">
-                    {isLoadingNotes ? (
-                      <div className="space-y-3">
-                        <Skeleton className="h-12 w-full" />
-                        <Skeleton className="h-12 w-4/5" />
-                      </div>
-                    ) : notes && notes.length > 0 ? (
-                      notes.map((note, index) => (
-                        <div key={note.id} className="group">
-                          <NoteItem
-                            note={note}
-                            isNewest={index === 0}
-                            onUpdate={handleUpdateNote}
-                            onDelete={handleDeleteNoteClick}
-                            isUpdating={updateNoteMutation.isPending && updateNoteMutation.variables?.noteId === note.id}
-                          />
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>
-                    )}
-                  </div>
-                </div>
+                ) : (
+                  <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}><PopoverTrigger asChild><Button variant="outline" size="sm" className="justify-start text-muted-foreground"><PlusCircle className="w-4 h-4 mr-2" />Gán nguồn...</Button></PopoverTrigger>{/* Popover Content */}</Popover>
+                )}
+                <PopoverContent className="p-0 w-[220px]" align="start">
+                  <Command><CommandInput placeholder="Tìm nguồn..." /><CommandList><CommandEmpty>Không tìm thấy.</CommandEmpty><CommandGroup>
+                    {isLoadingSources ? <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div> : availableSources?.map((source) => (<CommandItem key={source.id} onSelect={() => updateSourceMutation.mutate(source.id)} className="cursor-pointer"><div className="flex items-center gap-2"><div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", source.color)}><Users className="w-3 h-3" /></div><span>{source.name}</span></div></CommandItem>))}
+                  </CommandGroup>{assignedSource && <><CommandSeparator /><CommandGroup><CommandItem onSelect={() => updateSourceMutation.mutate(null)} className="cursor-pointer text-red-600 flex justify-center items-center gap-2"><Trash2 className="w-4 h-4" />Xóa nguồn</CommandItem></CommandGroup></>}</CommandList></Command>
+                </PopoverContent>
               </div>
-              <div className="p-4 border-t bg-white">
-                <Textarea
-                  placeholder="Thêm ghi chú... (Enter để gửi)"
-                  rows={2}
-                  value={newNote}
-                  onChange={(e) => setNewNote(e.target.value)}
-                  onKeyDown={handleNoteKeyDown}
-                  disabled={addNoteMutation.isPending}
-                />
+              <Separator />
+              <div>
+                <div className="flex justify-between items-center mb-2"><h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600"><TagIcon className="w-4 h-4" />Tags</h4><Popover open={isTagPopoverOpen} onOpenChange={setIsTagPopoverOpen}><PopoverTrigger asChild><Button variant="outline" size="sm" className="justify-start text-muted-foreground"><PlusCircle className="w-4 h-4 mr-2" />Thêm tag...</Button></PopoverTrigger><PopoverContent className="p-0 w-[220px]" align="start"><Command><CommandInput placeholder="Tìm kiếm tag..." /><CommandList><CommandEmpty>Không tìm thấy tag.</CommandEmpty><CommandGroup>{isLoadingTags ? <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div> : unassignedTags?.map((tag) => { const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag']; return (<CommandItem key={tag.id} onSelect={() => { addTagMutation.mutate(tag.id); setIsTagPopoverOpen(false); }} className="cursor-pointer"><div className="flex items-center gap-2"><div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", tag.color)}><Icon className="w-3 h-3" /></div><span>{tag.name}</span></div></CommandItem>); })}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                <div className="flex flex-wrap gap-2">{assignedTags.map((tag) => { const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag']; return (<Badge key={tag.id} className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", tag.color, "text-white")}><Icon className="w-3 h-3" />{tag.name}<button onClick={() => removeTagMutation.mutate(tag.id)} className="rounded-full hover:bg-black/20 p-0.5" disabled={removeTagMutation.isPending}><X className="w-3 h-3" /></button></Badge>); })}</div>
               </div>
-            </TabsContent>
-
-            <TabsContent value="care" className="absolute inset-0">
-              {conversation.customer ? (
-                <CareTab 
-                  customerId={conversation.customer.id} 
-                  threadId={conversation.id} 
-                />
-              ) : (
-                <div className="p-4">
-                  <p className="text-sm text-gray-500">Không thể lên lịch cho khách hàng này.</p>
-                </div>
-              )}
-            </TabsContent>
+              <Separator />
+              <div>
+                <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-600 mb-3"><Notebook className="w-4 h-4" />Ghi chú</h4>
+                <div className="space-y-2">{isLoadingNotes ? <div className="space-y-3"><Skeleton className="h-12 w-full" /><Skeleton className="h-12 w-4/5" /></div> : notes && notes.length > 0 ? notes.map((note, index) => (<div key={note.id} className="group"><NoteItem note={note} isNewest={index === 0} onUpdate={handleUpdateNote} onDelete={handleDeleteNoteClick} isUpdating={updateNoteMutation.isPending && updateNoteMutation.variables?.noteId === note.id} /></div>)) : <p className="text-sm text-gray-400 text-center py-4">Chưa có ghi chú nào.</p>}</div>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-white"><Textarea placeholder="Thêm ghi chú... (Enter để gửi)" rows={2} value={newNote} onChange={(e) => setNewNote(e.target.value)} onKeyDown={handleNoteKeyDown} disabled={addNoteMutation.isPending} /></div>
+          </TabsContent>
+          <TabsContent value="care" className="absolute inset-0">{conversation.customer ? <CareTab customerId={conversation.customer.id} threadId={conversation.id} /> : <div className="p-4"><p className="text-sm text-gray-500">Không thể lên lịch cho khách hàng này.</p></div>}</TabsContent>
         </div>
       </Tabs>
-      
-      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Ghi chú sẽ bị xóa vĩnh viễn.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setNoteToDelete(null)}>Hủy</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => noteToDelete && deleteNoteMutation.mutate(noteToDelete.id)}
-              disabled={deleteNoteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {deleteNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle><AlertDialogDescription>Hành động này không thể hoàn tác. Ghi chú sẽ bị xóa vĩnh viễn.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => setNoteToDelete(null)}>Hủy</AlertDialogCancel><AlertDialogAction onClick={() => noteToDelete && deleteNoteMutation.mutate(noteToDelete.id)} disabled={deleteNoteMutation.isPending} className="bg-red-600 hover:bg-red-700">{deleteNoteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </div>
   );
 };
