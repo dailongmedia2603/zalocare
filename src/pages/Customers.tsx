@@ -26,6 +26,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon, ArrowUpDown, Users, UserPlus, MessageSquare, Trash2, Loader2 } from "lucide-react";
@@ -91,15 +98,15 @@ const Customers = () => {
   const navigate = useNavigate();
   const [date, setDate] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
-  const pageSize = 7;
 
   const { data, isLoading, isError } = useCustomers(page, pageSize, date);
 
-  // Reset to page 1 when date filter changes
+  // Reset to page 1 when date filter or page size changes
   useEffect(() => {
     setPage(1);
-  }, [date]);
+  }, [date, pageSize]);
 
   // Real-time subscription for the customers table
   useEffect(() => {
@@ -150,6 +157,14 @@ const Customers = () => {
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
+    }
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    if (value === 'all') {
+      setPageSize(totalCustomers > 0 ? totalCustomers : 9999);
+    } else {
+      setPageSize(Number(value));
     }
   };
 
@@ -310,11 +325,29 @@ const Customers = () => {
       </div>
 
       <div className="flex justify-between items-center mt-4">
-        <span className="text-sm text-gray-500">
-          Hiển thị {Math.min((page - 1) * pageSize + 1, totalCustomers)}-{Math.min(page * pageSize, totalCustomers)} trên {totalCustomers} khách hàng
-        </span>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500">
+            Hiển thị {Math.min((page - 1) * pageSize + 1, totalCustomers)}-{Math.min(page * pageSize, totalCustomers)} trên {totalCustomers} khách hàng
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">Số lượng:</span>
+            <Select
+              value={pageSize >= totalCustomers && totalCustomers > 0 ? 'all' : String(pageSize)}
+              onValueChange={handlePageSizeChange}
+            >
+              <SelectTrigger className="h-8 w-[100px]">
+                <SelectValue placeholder="Số lượng" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+                <SelectItem value="all">Tất cả</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Pagination>
-          {renderPagination()}
+          {pageSize < totalCustomers && renderPagination()}
         </Pagination>
       </div>
 
