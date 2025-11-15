@@ -116,7 +116,7 @@ const AccountManagement = () => {
   };
 
   return (
-    <div className="flex-1 p-6 w-full">
+    <div className="flex-1 p-6 w-full overflow-y-auto">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold">Quản lý Tài khoản</h2>

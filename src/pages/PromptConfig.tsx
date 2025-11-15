@@ -132,7 +132,7 @@ const PromptConfig = () => {
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-6 w-full">
+      <div className="flex-1 p-6 w-full overflow-y-auto">
         <Card className="max-w-3xl mx-auto">
           <CardHeader>
             <Skeleton className="h-8 w-1/2" />
@@ -151,7 +151,7 @@ const PromptConfig = () => {
   }
 
   return (
-    <div className="flex-1 p-6 w-full">
+    <div className="flex-1 p-6 w-full overflow-y-auto">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <Card className="max-w-3xl mx-auto">

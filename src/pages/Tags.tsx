@@ -176,7 +176,7 @@ const Tags = () => {
   };
 
   return (
-    <div className="flex-1 p-6 w-full">
+    <div className="flex-1 p-6 w-full overflow-y-auto">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* TAGS COLUMN */}
         <div className="space-y-6">
