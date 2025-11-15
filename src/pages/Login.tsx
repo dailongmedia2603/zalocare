@@ -9,7 +9,7 @@ const Login = () => {
       <div className="hidden lg:flex flex-col items-center justify-center bg-gray-50 p-12 text-center">
         <img
           src="/logo-full.png"
-          className="h-24 w-auto object-contain mb-6"
+          className="h-48 w-auto object-contain mb-6"
           alt="Zalo.Care logo"
         />
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
