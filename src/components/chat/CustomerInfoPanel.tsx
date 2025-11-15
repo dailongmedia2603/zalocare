@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ConversationInboxItem, CustomerNote } from '@/types/chat';
-import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon, Notebook, UserCircle, Sparkles } from 'lucide-react';
+import { Mail, Phone, PlusCircle, X, Loader2, icons, Tag as TagIcon, Notebook, UserCircle, Sparkles, Edit, Check, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tag } from '@/pages/Tags';
@@ -21,7 +21,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import NoteItem from './NoteItem';
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import CareTab from './CareTab';
+import { Input } from '../ui/input';
 
 // Fetch all available tags for the user
 const useAvailableTags = () => {
@@ -80,8 +81,18 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<CustomerNote | null>(null);
   const { data: availableTags, isLoading: isLoadingTags } = useAvailableTags();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
 
   const customerId = conversation?.customer?.id;
+  const customerName = conversation?.customer?.display_name || 'Khách hàng mới';
+
+  useEffect(() => {
+    if (conversation) {
+      setEditedName(customerName);
+      setIsEditingName(false); // Reset editing state on conversation change
+    }
+  }, [conversation, customerName]);
 
   const { data: notes, isLoading: isLoadingNotes } = useNotes(customerId || null);
 
@@ -167,6 +178,33 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
     onError: (error) => showError(`Lỗi: ${error.message}`),
   });
 
+  const updateNameMutation = useMutation({
+    mutationFn: async (newName: string) => {
+      if (!customerId) throw new Error("Customer ID not found");
+      const { error } = await supabase
+        .from('customers')
+        .update({ display_name: newName })
+        .eq('id', customerId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      showSuccess("Tên khách hàng đã được cập nhật!");
+      setIsEditingName(false);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (error: Error) => {
+      showError(`Lỗi: ${error.message}`);
+    }
+  });
+
+  const handleNameSave = () => {
+    if (editedName.trim() && editedName.trim() !== customerName) {
+      updateNameMutation.mutate(editedName.trim());
+    } else {
+      setIsEditingName(false);
+    }
+  };
+
   const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -203,7 +241,6 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
   }
 
   const { customer, tags: assignedTags } = conversation;
-  const customerName = customer.display_name || 'Unknown User';
   const unassignedTags = availableTags?.filter(
     (at) => !assignedTags.some((st) => st.id === at.id)
   );
@@ -215,7 +252,30 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
           <AvatarImage src={customer.avatar_url || '/placeholder.svg'} />
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
-        <h3 className="mt-3 font-bold text-lg">{customerName}</h3>
+        {isEditingName ? (
+          <div className="flex items-center gap-2 mt-3 justify-center">
+            <Input 
+              value={editedName} 
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleNameSave() }}
+              className="h-8 text-lg text-center font-bold"
+              autoFocus
+            />
+            <Button size="icon" className="h-8 w-8" onClick={handleNameSave} disabled={updateNameMutation.isPending}>
+              {updateNameMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingName(false)}>
+              <XCircle className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1 mt-3 justify-center group">
+            <h3 className="font-bold text-lg">{customerName}</h3>
+            <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => setIsEditingName(true)}>
+              <Edit className="h-4 w-4 text-gray-500" />
+            </Button>
+          </div>
+        )}
       </div>
 
       <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">

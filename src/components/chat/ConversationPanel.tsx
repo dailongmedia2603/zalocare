@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ConversationInboxItem } from '@/types/chat';
-import { Image, SendHorizonal, Loader2, X } from 'lucide-react';
+import { Image, SendHorizonal, Loader2, X, Edit, Check, XCircle } from 'lucide-react';
 import MessageBubble from './MessageBubble';
 import { useMessages } from '@/hooks/use-chat';
 import { useEffect, useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { showError, showSuccess } from '@/utils/toast';
 import ImageSelectorDialog from './ImageSelectorDialog';
@@ -22,13 +22,24 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   const [message, setMessage] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState('');
+  const queryClient = useQueryClient();
+
+  const customerName = conversation?.customer?.display_name || 'Khách hàng mới';
+  const avatarUrl = conversation?.customer?.avatar_url;
+
+  useEffect(() => {
+    if (conversation) {
+      setEditedName(customerName);
+      setIsEditingName(false); // Reset editing state on conversation change
+    }
+  }, [conversation, customerName]);
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ newMessage, newImageUrl }: { newMessage: string, newImageUrl: string }) => {
       if (!conversation) throw new Error("Không có cuộc trò chuyện nào được chọn");
 
-      // The Supabase client automatically includes the Authorization header.
-      // We just need to ensure a user is logged in.
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error('Không thể xác thực người dùng. Vui lòng đăng nhập lại.');
@@ -66,6 +77,25 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
     },
   });
 
+  const updateNameMutation = useMutation({
+    mutationFn: async (newName: string) => {
+      if (!conversation?.customer?.id) throw new Error("Customer ID not found");
+      const { error } = await supabase
+        .from('customers')
+        .update({ display_name: newName })
+        .eq('id', conversation.customer.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      showSuccess("Tên khách hàng đã được cập nhật!");
+      setIsEditingName(false);
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    },
+    onError: (error: Error) => {
+      showError(`Lỗi: ${error.message}`);
+    }
+  });
+
   const handleSendMessage = () => {
     if (message.trim() || imageUrl.trim()) {
       sendMessageMutation.mutate({ newMessage: message.trim(), newImageUrl: imageUrl.trim() });
@@ -75,6 +105,14 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   const handleSelectImage = (url: string) => {
     setImageUrl(url);
     setIsImageSelectorOpen(false);
+  };
+
+  const handleNameSave = () => {
+    if (editedName.trim() && editedName.trim() !== customerName) {
+      updateNameMutation.mutate(editedName.trim());
+    } else {
+      setIsEditingName(false);
+    }
   };
 
   useEffect(() => {
@@ -91,9 +129,6 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
     );
   }
 
-  const customerName = conversation.customer?.display_name || 'Khách hàng mới';
-  const avatarUrl = conversation.customer?.avatar_url;
-
   return (
     <>
       <div className="flex-1 flex flex-col">
@@ -104,7 +139,32 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
               <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
             </Avatar>
             <div>
-              <h3 className="font-bold">{customerName}</h3>
+              {isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Input 
+                    value={editedName} 
+                    onChange={(e) => setEditedName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNameSave() }}
+                    className="h-8"
+                    autoFocus
+                  />
+                  <Button size="icon" className="h-8 w-8" onClick={handleNameSave} disabled={updateNameMutation.isPending}>
+                    {updateNameMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setIsEditingName(false)}>
+                    <XCircle className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1">
+                  <h3 className="font-bold">{customerName}</h3>
+                  {conversation.customer?.id && (
+                    <Button variant="ghost" size="icon" className="h-7 w-7 group" onClick={() => setIsEditingName(true)}>
+                      <Edit className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
