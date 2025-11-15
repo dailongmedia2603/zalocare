@@ -112,19 +112,25 @@ const CustomerInfoPanel = ({ conversation }: CustomerInfoPanelProps) => {
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               <div>
                 <h4 className="text-sm font-semibold text-gray-600 mb-2 flex items-center gap-2"><Users className="w-4 h-4" />Nguồn khách hàng</h4>
-                {assignedSource ? (
-                  <div className="flex items-center gap-2">
-                    <Badge className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", assignedSource.color, "text-white")}><Users className="w-3 h-3" />{assignedSource.name}</Badge>
-                    <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}><PopoverTrigger asChild><Button variant="outline" size="sm" className="h-7">Thay đổi</Button></PopoverTrigger>{/* Popover Content */}</Popover>
-                  </div>
-                ) : (
-                  <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}><PopoverTrigger asChild><Button variant="outline" size="sm" className="justify-start text-muted-foreground"><PlusCircle className="w-4 h-4 mr-2" />Gán nguồn...</Button></PopoverTrigger>{/* Popover Content */}</Popover>
-                )}
-                <PopoverContent className="p-0 w-[220px]" align="start">
-                  <Command><CommandInput placeholder="Tìm nguồn..." /><CommandList><CommandEmpty>Không tìm thấy.</CommandEmpty><CommandGroup>
-                    {isLoadingSources ? <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div> : availableSources?.map((source) => (<CommandItem key={source.id} onSelect={() => updateSourceMutation.mutate(source.id)} className="cursor-pointer"><div className="flex items-center gap-2"><div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", source.color)}><Users className="w-3 h-3" /></div><span>{source.name}</span></div></CommandItem>))}
-                  </CommandGroup>{assignedSource && <><CommandSeparator /><CommandGroup><CommandItem onSelect={() => updateSourceMutation.mutate(null)} className="cursor-pointer text-red-600 flex justify-center items-center gap-2"><Trash2 className="w-4 h-4" />Xóa nguồn</CommandItem></CommandGroup></>}</CommandList></Command>
-                </PopoverContent>
+                <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+                  {assignedSource ? (
+                    <div className="flex items-center gap-2">
+                      <Badge className={cn("py-1 pl-2 pr-1 gap-1.5 border-transparent", assignedSource.color, "text-white")}><Users className="w-3 h-3" />{assignedSource.name}</Badge>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-7">Thay đổi</Button>
+                      </PopoverTrigger>
+                    </div>
+                  ) : (
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="justify-start text-muted-foreground"><PlusCircle className="w-4 h-4 mr-2" />Gán nguồn...</Button>
+                    </PopoverTrigger>
+                  )}
+                  <PopoverContent className="p-0 w-[220px]" align="start">
+                    <Command><CommandInput placeholder="Tìm nguồn..." /><CommandList><CommandEmpty>Không tìm thấy.</CommandEmpty><CommandGroup>
+                      {isLoadingSources ? <div className="flex justify-center p-2"><Loader2 className="h-4 w-4 animate-spin" /></div> : availableSources?.map((source) => (<CommandItem key={source.id} onSelect={() => updateSourceMutation.mutate(source.id)} className="cursor-pointer"><div className="flex items-center gap-2"><div className={cn("w-5 h-5 rounded-md flex items-center justify-center text-white", source.color)}><Users className="w-3 h-3" /></div><span>{source.name}</span></div></CommandItem>))}
+                    </CommandGroup>{assignedSource && <><CommandSeparator /><CommandGroup><CommandItem onSelect={() => updateSourceMutation.mutate(null)} className="cursor-pointer text-red-600 flex justify-center items-center gap-2"><Trash2 className="w-4 h-4" />Xóa nguồn</CommandItem></CommandGroup></>}</CommandList></Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <Separator />
               <div>
