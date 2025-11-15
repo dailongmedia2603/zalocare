@@ -7,16 +7,11 @@ const Login = () => {
   return (
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2">
       <div className="hidden lg:flex flex-col items-center justify-center bg-gray-50 p-12 text-center">
-        <div className="flex items-center gap-3 mb-6">
-          <img
-            src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2zk5n7fp_expires_30_days.png"}
-            className="w-12 h-12 object-fill"
-            alt="Zalo.Care logo"
-          />
-          <span className="text-black text-3xl font-bold">
-            Zalo.Care
-          </span>
-        </div>
+        <img
+          src="/logo-full.png"
+          className="h-12 w-auto object-contain mb-6"
+          alt="Zalo.Care logo"
+        />
         <h1 className="text-4xl font-bold text-gray-800 mb-4">
           Giải pháp CSKH Zalo tự động
         </h1>
