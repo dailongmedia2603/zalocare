@@ -9,6 +9,7 @@ import {
   Image,
   Wand2,
   Settings,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -105,6 +106,11 @@ const Header = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuItem onClick={() => navigate('/account-management')}>
+              <UserCog className="mr-2 h-4 w-4" />
+              <span>Quản lý tài khoản</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Đăng xuất</span>

@@ -16,6 +16,7 @@ import Login from './pages/Login';
 import { supabase } from './integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import MediaLibrary from './pages/MediaLibrary';
+import AccountManagement from './pages/AccountManagement';
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => {
                 <Route path="/reports" element={<Reports />} />
                 <Route path="/prompt-config" element={<PromptConfig />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/account-management" element={<AccountManagement />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
