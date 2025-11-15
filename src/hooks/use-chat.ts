@@ -78,35 +78,41 @@ export const useChatSubscription = () => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
-        const handleZaloEventChange = () => {
-            // This will refetch the conversation list to update previews, unread counts, etc.
-            // Individual message updates are now handled within the ConversationPanel itself.
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        };
+        const handleDbChanges = (payload: any) => {
+            // Invalidate conversations list for any change on these tables
+            if (['zalo_events', 'customers', 'customer_tags', 'inbox_folders'].includes(payload.table)) {
+                queryClient.invalidateQueries({ queryKey: ['conversations'] });
+            }
 
-        const handleCustomerDataChange = () => {
-            queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        };
+            // Invalidate specific message thread if a new message arrives
+            if (payload.table === 'zalo_events') {
+                const threadId = payload.new?.threadId || payload.old?.threadId;
+                if (threadId) {
+                    queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+                }
+            }
 
-        const handleNoteChange = (payload: any) => {
-            const customerId = payload.new?.customer_id || payload.old?.customer_id;
-            if (customerId) {
-                queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+            // Invalidate notes for a specific customer
+            if (payload.table === 'notes') {
+                const customerId = payload.new?.customer_id || payload.old?.customer_id;
+                if (customerId) {
+                    queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+                }
+            }
+            
+            // Invalidate folder list if folders change
+            if (payload.table === 'inbox_folders') {
+                queryClient.invalidateQueries({ queryKey: ['inbox_folders'] });
             }
         };
 
-        const handleFolderChange = () => {
-            queryClient.invalidateQueries({ queryKey: ['inbox_folders'] });
-        };
-
-        const channel = supabase.channel('zalo-chat-realtime-updates');
-
-        channel
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleZaloEventChange)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleCustomerDataChange)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleCustomerDataChange)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleNoteChange)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_folders' }, handleFolderChange)
+        const channel = supabase
+            .channel('zalo-chat-realtime-updates')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleDbChanges)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_folders' }, handleDbChanges)
             .subscribe();
 
         return () => {
