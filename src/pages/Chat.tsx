@@ -5,6 +5,8 @@ import ConversationPanel from '@/components/chat/ConversationPanel';
 import CustomerInfoPanel from '@/components/chat/CustomerInfoPanel';
 import { useConversations, useChatSubscription } from '@/hooks/use-chat';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ChatContext {
   selectedFolderId: string | null;
@@ -12,7 +14,26 @@ interface ChatContext {
 }
 
 const Chat = () => {
-  useChatSubscription();
+  useChatSubscription(); // This now handles notes and folders
+  const queryClient = useQueryClient();
+
+  // Dedicated subscription for the inbox list to ensure real-time updates
+  useEffect(() => {
+    const handleInboxUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    };
+
+    const channel = supabase
+      .channel('inbox-list-realtime-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleInboxUpdate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleInboxUpdate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleInboxUpdate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
   
   const location = useLocation();
   const navigate = useNavigate();

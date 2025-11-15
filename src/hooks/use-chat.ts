@@ -73,19 +73,14 @@ export const useMessages = (threadId: string | null) => {
     });
 };
 
-// Custom hook to listen for real-time changes in the database
+// Custom hook to listen for real-time changes for secondary data like notes and folders
 export const useChatSubscription = () => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
         const handleDbChanges = (payload: any) => {
-            // Invalidate conversations list for any change on these tables
-            if (['zalo_events', 'customers', 'customer_tags', 'inbox_folders'].includes(payload.table)) {
-                queryClient.invalidateQueries({ queryKey: ['conversations'] });
-            }
-
-            // NOTE: Specific message invalidation is now handled inside ConversationPanel.tsx
-            // for better performance and reliability with filtered subscriptions.
+            // NOTE: Inbox and message updates are now handled in their respective components.
+            // This hook handles updates for the customer info panel and folder list.
 
             // Invalidate notes for a specific customer
             if (payload.table === 'notes') {
@@ -98,14 +93,13 @@ export const useChatSubscription = () => {
             // Invalidate folder list if folders change
             if (payload.table === 'inbox_folders') {
                 queryClient.invalidateQueries({ queryKey: ['inbox_folders'] });
+                // Also invalidate conversations as folders affect them
+                queryClient.invalidateQueries({ queryKey: ['conversations'] });
             }
         };
 
         const channel = supabase
-            .channel('zalo-chat-realtime-updates')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleDbChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleDbChanges)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleDbChanges)
+            .channel('zalo-chat-sidebar-updates')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleDbChanges)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_folders' }, handleDbChanges)
             .subscribe();
