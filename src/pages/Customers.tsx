@@ -349,12 +349,12 @@ const Customers = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {customer.tags.slice(0, 2).map((tag) => (
+                      {customer.tags?.slice(0, 2).map((tag) => (
                         <Badge key={tag.id} className={cn("py-0.5 px-1.5 text-xs border-transparent", tag.color, "text-white")}>
                           {tag.name}
                         </Badge>
                       ))}
-                      {customer.tags.length > 2 && (
+                      {customer.tags?.length > 2 && (
                         <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
                           +{customer.tags.length - 2}
                         </Badge>
