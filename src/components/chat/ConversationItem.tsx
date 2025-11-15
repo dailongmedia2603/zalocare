@@ -20,16 +20,6 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
-  // Function to truncate text by words
-  const truncateByWords = (text: string | null, wordLimit: number) => {
-    if (!text) return '';
-    const words = text.split(' ');
-    if (words.length > wordLimit) {
-      return words.slice(0, wordLimit).join(' ') + '...';
-    }
-    return text;
-  };
-
   return (
     <div
       onClick={onClick}
@@ -50,7 +40,7 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
           </div>
           <div className="flex justify-between items-start mt-1">
             <p className="text-xs text-gray-500 truncate pr-2">
-              {truncateByWords(conversation.last_message_preview, 9)}
+              {conversation.last_message_preview}
             </p>
             {conversation.unread_count > 0 && (
               <Badge className="bg-orange-500 text-white h-5 px-2">{conversation.unread_count}</Badge>
