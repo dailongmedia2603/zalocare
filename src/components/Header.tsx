@@ -89,7 +89,7 @@ const Header = () => {
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
       <div className="flex items-center w-auto mr-6">
         <img
-          src="/logo-full.svg"
+          src="/logo-full.png"
           className="h-9 w-auto object-contain"
           alt="Zalo.Care logo"
         />
