@@ -89,8 +89,8 @@ const Header = () => {
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
       <div className="flex items-center w-auto mr-6 gap-3">
         <img
-          src={"https://storage.googleapis.com/tagjs-prod.appspot.com/v1/wjyXx6yIud/2zk5n7fp_expires_30_days.png"}
-          className="w-9 h-9 object-fill"
+          src="/logo.svg"
+          className="w-9 h-9 object-contain"
           alt="Zalo.Care logo"
         />
         <span className="text-black text-lg font-bold">
