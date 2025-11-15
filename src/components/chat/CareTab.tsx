@@ -123,6 +123,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
       showSuccess('Đã lên lịch gửi tin nhắn!');
       setContent('');
       setImageUrl('');
+      queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
     },
     onError: (error: Error) => showError(`Lỗi: ${error.message}`),
   });
