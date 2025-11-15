@@ -3,7 +3,7 @@ import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import InboxPanel from '@/components/chat/InboxPanel';
 import ConversationPanel from '@/components/chat/ConversationPanel';
 import CustomerInfoPanel from '@/components/chat/CustomerInfoPanel';
-import { useConversations, useChatSubscription } from '@/hooks/use-chat';
+import { useConversations } from '@/hooks/use-chat';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,20 +14,38 @@ interface ChatContext {
 }
 
 const Chat = () => {
-  useChatSubscription(); // This now handles notes and folders
   const queryClient = useQueryClient();
 
-  // Dedicated subscription for the inbox list to ensure real-time updates
+  // Centralized real-time subscription for the entire chat page
   useEffect(() => {
-    const handleInboxUpdate = () => {
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    const handleChanges = (payload: any) => {
+      // Invalidate conversations list for any change on these tables
+      // This updates message previews, order, customer names, tags, etc.
+      if (['zalo_events', 'customers', 'customer_tags', 'inbox_folders'].includes(payload.table)) {
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      }
+
+      // Invalidate notes for a specific customer (for the right-side panel)
+      if (payload.table === 'notes') {
+        const customerId = payload.new?.customer_id || payload.old?.customer_id;
+        if (customerId) {
+          queryClient.invalidateQueries({ queryKey: ['notes', customerId] });
+        }
+      }
+      
+      // Invalidate folder list if folders change (for the sidebar)
+      if (payload.table === 'inbox_folders') {
+        queryClient.invalidateQueries({ queryKey: ['inbox_folders'] });
+      }
     };
 
     const channel = supabase
-      .channel('inbox-list-realtime-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleInboxUpdate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleInboxUpdate)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleInboxUpdate)
+      .channel('zalo-chat-page-realtime') // A single channel for the whole page
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'zalo_events' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_tags' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, handleChanges)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inbox_folders' }, handleChanges)
       .subscribe();
 
     return () => {
