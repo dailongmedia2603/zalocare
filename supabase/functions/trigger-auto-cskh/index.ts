@@ -11,9 +11,12 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log("Function 'trigger-auto-cskh' started by cron job.");
+
   // 1. Security check for cron job
   const authHeader = req.headers.get('Authorization');
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    console.error("Unauthorized access attempt detected.");
     return new Response('Unauthorized', { status: 401, headers: corsHeaders });
   }
 
@@ -24,50 +27,57 @@ serve(async (req) => {
 
   try {
     // 2. Find customers eligible for auto-care
-    // - AI CSKH is enabled
-    // - They do NOT have a 'pending' scheduled message
+    console.log("Searching for eligible customers to process...");
     const { data: customers, error: customerError } = await supabaseAdmin.rpc(
       'get_eligible_auto_cskh_customers', 
       { limit_count: BATCH_SIZE }
     );
 
-    if (customerError) throw customerError;
+    if (customerError) {
+      console.error("Error fetching customers:", customerError);
+      throw customerError;
+    }
 
     if (!customers || customers.length === 0) {
+      console.log("No eligible customers found in this run.");
       return new Response(JSON.stringify({ message: 'No eligible customers to process.' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log(`Found ${customers.length} eligible customer(s).`);
+
     // 3. Trigger 'generate-care-message' for each eligible customer asynchronously
+    console.log("Triggering 'generate-care-message' function for each customer...");
     const invocationPromises = customers.map(customer => {
-      // We use the admin client to invoke the function, which will use the service_role_key
-      // The 'generate-care-message' function will then use this key to perform its tasks
       return supabaseAdmin.functions.invoke('generate-care-message', {
         body: { 
           threadId: customer.thread_id,
-          // Pass user_id to be used inside the target function
           user_id: customer.user_id 
         },
       });
     });
 
     // We don't await the promises here, letting them run in the background
-    // This ensures the orchestrator function finishes quickly.
     Promise.allSettled(invocationPromises).then(results => {
+        console.log("Invocation results processing started.");
         results.forEach((result, index) => {
             if (result.status === 'rejected') {
                 console.error(`Error invoking generate-care-message for threadId ${customers[index].thread_id}:`, result.reason);
+            } else {
+                console.log(`Successfully invoked for threadId ${customers[index].thread_id}.`);
             }
         });
+        console.log("Invocation results processing finished.");
     });
 
+    console.log(`Successfully triggered AI care for ${customers.length} customer(s). Function run complete.`);
     return new Response(JSON.stringify({ message: `Triggered AI care for ${customers.length} customers.` }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in trigger-auto-cskh function:', error);
+    console.error('Critical error in trigger-auto-cskh function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
