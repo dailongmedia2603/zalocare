@@ -135,6 +135,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
     },
     onSuccess: () => {
       showSuccess('Đã xóa lịch gửi!');
+      queryClient.invalidateQueries({ queryKey: ['scheduledMessages', customerId] });
     },
     onError: (error: Error) => showError(`Lỗi: ${error.message}`),
   });
