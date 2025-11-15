@@ -20,6 +20,16 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
+  // Function to truncate text by words
+  const truncateByWords = (text: string | null, wordLimit: number) => {
+    if (!text) return '';
+    const words = text.split(' ');
+    if (words.length > wordLimit) {
+      return words.slice(0, wordLimit).join(' ') + '...';
+    }
+    return text;
+  };
+
   return (
     <div
       onClick={onClick}
@@ -33,14 +43,14 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
           <AvatarImage src={avatarUrl || '/placeholder.svg'} alt={customerName} />
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-w-0">
           <div className="flex justify-between items-center gap-2">
-            <h3 className="font-semibold text-sm truncate min-w-0 flex-1">{customerName}</h3>
-            <span className="text-xs text-gray-500 whitespace-nowrap">{timeAgo}</span>
+            <h3 className="font-semibold text-sm truncate">{customerName}</h3>
+            <span className="text-xs text-gray-500 flex-shrink-0">{timeAgo}</span>
           </div>
           <div className="flex justify-between items-start mt-1">
             <p className="text-xs text-gray-500 truncate pr-2">
-              {conversation.last_message_preview}
+              {truncateByWords(conversation.last_message_preview, 9)}
             </p>
             {conversation.unread_count > 0 && (
               <Badge className="bg-orange-500 text-white h-5 px-2">{conversation.unread_count}</Badge>
