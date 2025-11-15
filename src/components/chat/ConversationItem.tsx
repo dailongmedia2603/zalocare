@@ -20,20 +20,6 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
-  const truncateByWord = (text: string | null, wordLimit: number): string => {
-    if (!text) {
-      return '';
-    }
-    const words = text.split(' ');
-    if (words.length > wordLimit) {
-      return words.slice(0, wordLimit).join(' ') + '...';
-    }
-    return text;
-  };
-
-  const messagePreview = truncateByWord(conversation.last_message_preview, 9);
-  const truncatedCustomerName = truncateByWord(customerName, 3);
-
   return (
     <div
       onClick={onClick}
@@ -49,12 +35,12 @@ const ConversationItem = ({ conversation, isSelected, onClick }: ConversationIte
         </Avatar>
         <div className="flex-1 overflow-hidden">
           <div className="flex justify-between items-center gap-2">
-            <h3 className="font-semibold text-sm truncate min-w-0">{truncatedCustomerName}</h3>
-            <span className="text-xs text-gray-500 whitespace-nowrap flex-shrink-0">{timeAgo}</span>
+            <h3 className="font-semibold text-sm truncate min-w-0 flex-1">{customerName}</h3>
+            <span className="text-xs text-gray-500 whitespace-nowrap">{timeAgo}</span>
           </div>
           <div className="flex justify-between items-start mt-1">
             <p className="text-xs text-gray-500 truncate pr-2">
-              {messagePreview}
+              {conversation.last_message_preview}
             </p>
             {conversation.unread_count > 0 && (
               <Badge className="bg-orange-500 text-white h-5 px-2">{conversation.unread_count}</Badge>
