@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar as CalendarIcon, ArrowUpDown, MessageSquare, Trash2, Loader2, Search, Users } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, MessageSquare, Trash2, Loader2, Search, Users, Folder } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -48,7 +48,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { showSuccess, showError } from '@/utils/toast';
 import { TagFilter } from '@/components/customers/TagFilter';
 import { SourceFilter } from '@/components/customers/SourceFilter';
+import { FolderFilter } from '@/components/customers/FolderFilter';
 import { Tag, CustomerSource } from '@/pages/Tags';
+import { InboxFolder } from '@/types/inbox';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -63,6 +65,7 @@ interface Customer {
   created_at: string;
   tags: Tag[];
   source: CustomerSource | null;
+  folder: InboxFolder | null;
   ai_cskh_enabled: boolean;
   scheduled_messages_count: number;
 }
@@ -72,12 +75,13 @@ const useCustomers = (page: number, pageSize: number, filters: {
   searchTerm: string;
   selectedTagIds: string[];
   selectedSourceIds: string[];
+  selectedFolderIds: string[];
   aiCskhStatus: 'all' | 'enabled' | 'disabled';
 }) => {
-  const { dateRange, searchTerm, selectedTagIds, selectedSourceIds, aiCskhStatus } = filters;
+  const { dateRange, searchTerm, selectedTagIds, selectedSourceIds, selectedFolderIds, aiCskhStatus } = filters;
 
   return useQuery<{ customers: Customer[], count: number }, Error>({
-    queryKey: ['customers', page, pageSize, dateRange, searchTerm, selectedTagIds, selectedSourceIds, aiCskhStatus],
+    queryKey: ['customers', page, pageSize, dateRange, searchTerm, selectedTagIds, selectedSourceIds, selectedFolderIds, aiCskhStatus],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { customers: [], count: 0 };
@@ -94,6 +98,7 @@ const useCustomers = (page: number, pageSize: number, filters: {
         p_search_term: searchTerm || null,
         p_tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
         p_source_ids: selectedSourceIds.length > 0 ? selectedSourceIds : null,
+        p_folder_ids: selectedFolderIds.length > 0 ? selectedFolderIds : null,
         p_start_date: dateRange?.from?.toISOString() || null,
         p_end_date: toDate?.toISOString() || null,
         p_ai_cskh_status: aiCskhStatus === 'all' ? null : aiCskhStatus === 'enabled',
@@ -127,6 +132,7 @@ const Customers = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
+  const [selectedFolderIds, setSelectedFolderIds] = useState<string[]>([]);
   const [aiCskhStatus, setAiCskhStatus] = useState<'all' | 'enabled' | 'disabled'>('all');
   const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
@@ -142,13 +148,14 @@ const Customers = () => {
   useEffect(() => {
     setPage(1);
     setSelectedCustomerIds([]);
-  }, [date, debouncedSearchTerm, selectedTagIds, selectedSourceIds, pageSize, aiCskhStatus]);
+  }, [date, debouncedSearchTerm, selectedTagIds, selectedSourceIds, selectedFolderIds, pageSize, aiCskhStatus]);
 
   const { data, isLoading, isError } = useCustomers(page, pageSize, {
     dateRange: date,
     searchTerm: debouncedSearchTerm,
     selectedTagIds,
     selectedSourceIds,
+    selectedFolderIds,
     aiCskhStatus,
   });
 
@@ -187,7 +194,7 @@ const Customers = () => {
       return { customerId, enabled };
     },
     onSuccess: ({ customerId, enabled }) => {
-      queryClient.setQueryData(['customers', page, pageSize, date, debouncedSearchTerm, selectedTagIds, selectedSourceIds, aiCskhStatus], (oldData: any) => {
+      queryClient.setQueryData(['customers', page, pageSize, date, debouncedSearchTerm, selectedTagIds, selectedSourceIds, selectedFolderIds, aiCskhStatus], (oldData: any) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -263,6 +270,7 @@ const Customers = () => {
           </div>
           <TagFilter selectedTagIds={selectedTagIds} onChange={setSelectedTagIds} />
           <SourceFilter selectedSourceIds={selectedSourceIds} onChange={setSelectedSourceIds} />
+          <FolderFilter selectedFolderIds={selectedFolderIds} onChange={setSelectedFolderIds} />
           <Select value={aiCskhStatus} onValueChange={(value) => setAiCskhStatus(value as any)}>
             <SelectTrigger className="w-[180px] bg-white h-9">
               <SelectValue placeholder="Trạng thái AI CSKH" />
@@ -345,6 +353,7 @@ const Customers = () => {
                   </Button>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-600 w-[15%]">Nguồn</TableHead>
+                <TableHead className="font-semibold text-gray-600 w-[15%]">Thư mục</TableHead>
                 <TableHead className="font-semibold text-gray-600 w-[15%]">Tags</TableHead>
                 <TableHead>
                   <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
@@ -366,6 +375,7 @@ const Customers = () => {
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                     <TableCell className="pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
@@ -373,13 +383,13 @@ const Customers = () => {
                 ))
               ) : isError ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-red-500 h-48">
+                  <TableCell colSpan={9} className="text-center text-red-500 h-48">
                     Lỗi khi tải dữ liệu khách hàng.
                   </TableCell>
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 h-48">
+                  <TableCell colSpan={9} className="text-center text-gray-500 h-48">
                     Không có khách hàng nào.
                   </TableCell>
                 </TableRow>
@@ -418,6 +428,14 @@ const Customers = () => {
                         <Badge className={cn("py-0.5 px-1.5 text-xs border-transparent", customer.source.color, "text-white")}>
                           <Users className="w-2.5 h-2.5 mr-1" />
                           {customer.source.name}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {customer.folder && (
+                        <Badge variant="outline" className="py-0.5 px-1.5 text-xs">
+                          <Folder className="w-2.5 h-2.5 mr-1" />
+                          {customer.folder.name}
                         </Badge>
                       )}
                     </TableCell>
