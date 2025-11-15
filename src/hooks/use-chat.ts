@@ -78,12 +78,10 @@ export const useChatSubscription = () => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
-        const handleZaloEventChange = (payload: any) => {
+        const handleZaloEventChange = () => {
+            // This will refetch the conversation list to update previews, unread counts, etc.
+            // Individual message updates are now handled within the ConversationPanel itself.
             queryClient.invalidateQueries({ queryKey: ['conversations'] });
-            const threadId = payload.new?.threadId || payload.old?.threadId;
-            if (threadId) {
-                queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
-            }
         };
 
         const handleCustomerDataChange = () => {
