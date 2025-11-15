@@ -7,15 +7,18 @@ import {
   Files,
   LogOut,
   Image,
+  Wand2,
+  Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +32,7 @@ const navItems = [
 ];
 
 const Header = () => {
+  const navigate = useNavigate();
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
@@ -99,6 +103,15 @@ const Header = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuItem onClick={() => navigate('/prompt-config')}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              <span>Cấu hình Prompt</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Cài đặt</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Đăng xuất</span>

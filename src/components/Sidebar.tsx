@@ -4,8 +4,6 @@ import {
   LineChart,
   Filter,
   Database,
-  Wand2,
-  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -20,8 +18,6 @@ const navItems = [
   { name: 'Analytics', icon: LineChart, path: undefined },
   { name: 'Filter', icon: Filter, path: undefined },
   { name: 'Database', icon: Database, path: undefined },
-  { name: 'Cấu hình Promt', icon: Wand2, path: '/prompt-config' },
-  { name: 'Cài đặt', icon: Settings, path: '/settings' },
 ];
 
 const Sidebar = () => {
