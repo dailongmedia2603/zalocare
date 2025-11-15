@@ -325,10 +325,10 @@ const Customers = () => {
       </div>
 
       <div className="flex justify-between items-center mt-4">
+        <span className="text-sm text-gray-500">
+          Hiển thị {Math.min((page - 1) * pageSize + 1, totalCustomers)}-{Math.min(page * pageSize, totalCustomers)} trên {totalCustomers} khách hàng
+        </span>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">
-            Hiển thị {Math.min((page - 1) * pageSize + 1, totalCustomers)}-{Math.min(page * pageSize, totalCustomers)} trên {totalCustomers} khách hàng
-          </span>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">Số lượng:</span>
             <Select
@@ -345,10 +345,10 @@ const Customers = () => {
               </SelectContent>
             </Select>
           </div>
+          <Pagination>
+            {pageSize < totalCustomers && renderPagination()}
+          </Pagination>
         </div>
-        <Pagination>
-          {pageSize < totalCustomers && renderPagination()}
-        </Pagination>
       </div>
 
       <AlertDialog open={!!customerToDelete} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
