@@ -3,11 +3,11 @@ import { Bot, Webhook, Link2, Folder } from "lucide-react";
 import GeminiCustomSettings from "@/components/GeminiCustomSettings";
 import ZaloConnectionSettings from "@/components/ZaloConnectionSettings";
 import N8NWebhookSettings from "@/components/N8NWebhookSettings";
-import InboxFoldersSettings from "@/components/InboxFoldersSettings";
+import InboxFoldersSettings from "@/components/settings/InboxFoldersSettings";
 
 const Settings = () => {
   return (
-    <div className="flex-1 p-6 w-full">
+    <div className="flex-1 p-6 w-full overflow-y-auto">
       <h2 className="text-2xl font-bold mb-6">Cài đặt</h2>
       <Tabs defaultValue="zalo" className="w-full">
         <TabsList className="h-auto justify-start bg-transparent p-0 gap-4 flex-wrap">
