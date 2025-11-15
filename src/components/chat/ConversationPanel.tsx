@@ -30,6 +30,36 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   const customerName = conversation?.customer?.display_name || 'Khách hàng mới';
   const avatarUrl = conversation?.customer?.avatar_url;
 
+  // Real-time subscription for messages in this specific conversation
+  useEffect(() => {
+    if (!threadId) {
+      return;
+    }
+
+    const channel = supabase
+      .channel(`realtime-messages:${threadId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'zalo_events',
+          filter: `threadId=eq.${threadId}`,
+        },
+        () => {
+          // When a change happens in this conversation's events, invalidate its messages
+          queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
+        }
+      )
+      .subscribe();
+
+    // Cleanup function to remove the channel subscription when the component unmounts
+    // or the conversation changes.
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [threadId, queryClient]);
+
   useEffect(() => {
     if (conversation) {
       setEditedName(customerName);

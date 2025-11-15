@@ -84,13 +84,8 @@ export const useChatSubscription = () => {
                 queryClient.invalidateQueries({ queryKey: ['conversations'] });
             }
 
-            // Invalidate specific message thread if a new message arrives
-            if (payload.table === 'zalo_events') {
-                const threadId = payload.new?.threadId || payload.old?.threadId;
-                if (threadId) {
-                    queryClient.invalidateQueries({ queryKey: ['messages', threadId] });
-                }
-            }
+            // NOTE: Specific message invalidation is now handled inside ConversationPanel.tsx
+            // for better performance and reliability with filtered subscriptions.
 
             // Invalidate notes for a specific customer
             if (payload.table === 'notes') {
