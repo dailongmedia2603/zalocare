@@ -1,39 +1,55 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import InboxPanel from '@/components/chat/InboxPanel';
 import ConversationPanel from '@/components/chat/ConversationPanel';
 import CustomerInfoPanel from '@/components/chat/CustomerInfoPanel';
 import { useConversations, useChatSubscription } from '@/hooks/use-chat';
 import { Skeleton } from '@/components/ui/skeleton';
 
+interface ChatContext {
+  selectedFolderId: string | null;
+  setSelectedFolderId: (id: string | null) => void;
+}
+
 const Chat = () => {
-  // This custom hook sets up the real-time subscription for the entire chat interface.
   useChatSubscription();
   
   const location = useLocation();
   const navigate = useNavigate();
-  const { data: conversations, isLoading } = useConversations();
+  const { selectedFolderId, setSelectedFolderId } = useOutletContext<ChatContext>();
+  const { data: conversations, isLoading } = useConversations(selectedFolderId);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
-  // Auto-select the first conversation or the one from navigation state.
   useEffect(() => {
     const conversationIdFromState = location.state?.selectedConversationId;
 
     if (conversationIdFromState) {
       setSelectedConversationId(conversationIdFromState);
-      // Clear the state to prevent re-selection on refresh
+      setSelectedFolderId(null); // Reset to "All" folder to ensure the conversation is visible
       navigate(location.pathname, { replace: true, state: {} });
     } else if (!selectedConversationId && conversations && conversations.length > 0) {
       setSelectedConversationId(conversations[0].id);
+    } else if (conversations && conversations.length === 0) {
+      setSelectedConversationId(null);
     }
-  }, [conversations, selectedConversationId, location.state, navigate, location.pathname]);
+  }, [conversations, selectedConversationId, location.state, navigate, location.pathname, setSelectedFolderId]);
+
+  // When folder changes, reset selection
+  useEffect(() => {
+    setSelectedConversationId(null);
+  }, [selectedFolderId]);
 
   const selectedConversation = conversations?.find(c => c.id === selectedConversationId) || null;
 
   if (isLoading) {
     return (
       <div className="flex h-full w-full">
-        <Skeleton className="w-[320px] h-full" />
+        <div className="w-[320px] border-r p-2 space-y-2">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
         <div className="flex-1 flex flex-col">
           <Skeleton className="h-[65px] border-b" />
           <div className="flex-1 p-4 space-y-4">
