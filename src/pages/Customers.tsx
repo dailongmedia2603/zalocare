@@ -34,8 +34,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar as CalendarIcon, ArrowUpDown, Users, UserPlus, MessageSquare, Trash2, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Calendar as CalendarIcon, ArrowUpDown, Users, UserPlus, MessageSquare, Trash2, Loader2, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -46,8 +46,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showSuccess, showError } from '@/utils/toast';
+import { TagFilter } from '@/components/customers/TagFilter';
 
-// Define the customer type based on the database schema
 interface Customer {
   id: string;
   zalo_id: string;
@@ -57,41 +57,50 @@ interface Customer {
   created_at: string;
 }
 
-// Hook to fetch customers with pagination and filtering
-const useCustomers = (page: number, pageSize: number, dateRange?: DateRange) => {
+const useCustomers = (page: number, pageSize: number, filters: {
+  dateRange?: DateRange;
+  searchTerm: string;
+  selectedTagIds: string[];
+}) => {
+  const { dateRange, searchTerm, selectedTagIds } = filters;
+
   return useQuery<{ customers: Customer[], count: number }, Error>({
-    queryKey: ['customers', page, pageSize, dateRange],
+    queryKey: ['customers', page, pageSize, dateRange, searchTerm, selectedTagIds],
     queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return { customers: [], count: 0 };
+
       const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
-
-      let query = supabase
-        .from('customers')
-        .select('*', { count: 'exact' });
-
-      // Apply date filters
-      if (dateRange?.from) {
-        query = query.gte('created_at', dateRange.from.toISOString());
-      }
-      if (dateRange?.to) {
-        const toDate = new Date(dateRange.to);
-        toDate.setHours(23, 59, 59, 999); // Include the entire 'to' day
-        query = query.lte('created_at', toDate.toISOString());
-      }
-
-      const { data, error, count } = await query
-        .order('created_at', { ascending: false })
-        .range(from, to);
-
-      if (error) {
-        throw new Error(error.message);
-      }
       
-      return { customers: data || [], count: count || 0 };
+      const toDate = dateRange?.to ? new Date(dateRange.to) : undefined;
+      if (toDate) {
+        toDate.setHours(23, 59, 59, 999);
+      }
+
+      const rpcParams = {
+        p_user_id: user.id,
+        p_search_term: searchTerm || null,
+        p_tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
+        p_start_date: dateRange?.from?.toISOString() || null,
+        p_end_date: toDate?.toISOString() || null,
+      };
+
+      const [customersResult, countResult] = await Promise.all([
+        supabase.rpc('get_filtered_customers_list', {
+          ...rpcParams,
+          p_limit: pageSize,
+          p_offset: from,
+        }),
+        supabase.rpc('get_filtered_customers_count', rpcParams)
+      ]);
+
+      if (customersResult.error) throw new Error(customersResult.error.message);
+      if (countResult.error) throw new Error(countResult.error.message);
+
+      return { customers: customersResult.data || [], count: countResult.data || 0 };
     },
   });
 };
-
 
 const Customers = () => {
   const queryClient = useQueryClient();
@@ -100,31 +109,28 @@ const Customers = () => {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
-  const { data, isLoading, isError } = useCustomers(page, pageSize, date);
+  // Debounce search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
-  // Reset to page 1 when date filter or page size changes
+  // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [date, pageSize]);
+  }, [date, debouncedSearchTerm, selectedTagIds, pageSize]);
 
-  // Real-time subscription for the customers table
-  useEffect(() => {
-    const channel = supabase
-      .channel('realtime-customers-page')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'customers' },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['customers'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  const { data, isLoading, isError } = useCustomers(page, pageSize, {
+    dateRange: date,
+    searchTerm: debouncedSearchTerm,
+    selectedTagIds,
+  });
 
   const deleteCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
@@ -193,22 +199,18 @@ const Customers = () => {
   return (
     <div className="flex-1 p-6 w-full">
       <div className="flex justify-between items-center mb-6">
-        <Tabs defaultValue="all">
-          <TabsList className="bg-transparent p-0 h-auto space-x-4">
-            <TabsTrigger value="all" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
-              <Users className="w-4 h-4" />
-              Tất cả
-            </TabsTrigger>
-            <TabsTrigger value="new" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
-              <UserPlus className="w-4 h-4" />
-              Mới
-            </TabsTrigger>
-            <TabsTrigger value="contacted" className="flex items-center gap-2 text-gray-500 text-base data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:text-gray-900 font-semibold rounded-none pb-2 px-1">
-              <MessageSquare className="w-4 h-4" />
-              Đã liên hệ
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Tìm kiếm theo tên..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 bg-white w-64 h-9"
+            />
+          </div>
+          <TagFilter selectedTagIds={selectedTagIds} onChange={setSelectedTagIds} />
+        </div>
         <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
@@ -216,7 +218,7 @@ const Customers = () => {
                 id="date"
                 variant={"outline"}
                 className={cn(
-                  "w-[260px] justify-start text-left font-normal bg-white",
+                  "w-[260px] justify-start text-left font-normal bg-white h-9",
                   !date && "text-muted-foreground"
                 )}
               >
