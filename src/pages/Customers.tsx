@@ -67,11 +67,12 @@ const useCustomers = (page: number, pageSize: number, filters: {
   dateRange?: DateRange;
   searchTerm: string;
   selectedTagIds: string[];
+  aiCskhStatus: 'all' | 'enabled' | 'disabled';
 }) => {
-  const { dateRange, searchTerm, selectedTagIds } = filters;
+  const { dateRange, searchTerm, selectedTagIds, aiCskhStatus } = filters;
 
   return useQuery<{ customers: Customer[], count: number }, Error>({
-    queryKey: ['customers', page, pageSize, dateRange, searchTerm, selectedTagIds],
+    queryKey: ['customers', page, pageSize, dateRange, searchTerm, selectedTagIds, aiCskhStatus],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { customers: [], count: 0 };
@@ -89,6 +90,7 @@ const useCustomers = (page: number, pageSize: number, filters: {
         p_tag_ids: selectedTagIds.length > 0 ? selectedTagIds : null,
         p_start_date: dateRange?.from?.toISOString() || null,
         p_end_date: toDate?.toISOString() || null,
+        p_ai_cskh_status: aiCskhStatus === 'all' ? null : aiCskhStatus === 'enabled',
       };
 
       const [customersResult, countResult] = await Promise.all([
@@ -118,6 +120,7 @@ const Customers = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [aiCskhStatus, setAiCskhStatus] = useState<'all' | 'enabled' | 'disabled'>('all');
 
   // Debounce search term
   useEffect(() => {
@@ -130,12 +133,13 @@ const Customers = () => {
   // Reset page on filter change
   useEffect(() => {
     setPage(1);
-  }, [date, debouncedSearchTerm, selectedTagIds, pageSize]);
+  }, [date, debouncedSearchTerm, selectedTagIds, pageSize, aiCskhStatus]);
 
   const { data, isLoading, isError } = useCustomers(page, pageSize, {
     dateRange: date,
     searchTerm: debouncedSearchTerm,
     selectedTagIds,
+    aiCskhStatus,
   });
 
   const deleteCustomerMutation = useMutation({
@@ -164,7 +168,7 @@ const Customers = () => {
       return { customerId, enabled };
     },
     onSuccess: ({ customerId, enabled }) => {
-      queryClient.setQueryData(['customers', page, pageSize, date, debouncedSearchTerm, selectedTagIds], (oldData: any) => {
+      queryClient.setQueryData(['customers', page, pageSize, date, debouncedSearchTerm, selectedTagIds, aiCskhStatus], (oldData: any) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
@@ -230,7 +234,7 @@ const Customers = () => {
   };
 
   return (
-    <div className="flex-1 p-6 w-full">
+    <div className="flex-1 p-6 w-full flex flex-col overflow-hidden">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -243,6 +247,16 @@ const Customers = () => {
             />
           </div>
           <TagFilter selectedTagIds={selectedTagIds} onChange={setSelectedTagIds} />
+          <Select value={aiCskhStatus} onValueChange={(value) => setAiCskhStatus(value as any)}>
+            <SelectTrigger className="w-[180px] bg-white h-9">
+              <SelectValue placeholder="Trạng thái AI CSKH" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả AI CSKH</SelectItem>
+              <SelectItem value="enabled">Đã bật</SelectItem>
+              <SelectItem value="disabled">Đã tắt</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Popover>
@@ -284,111 +298,113 @@ const Customers = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-gray-50 hover:bg-gray-50 border-b">
-              <TableHead className="pl-6 w-[30%]">
-                <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
-                  Tên
-                  <ArrowUpDown className="ml-2 h-3 w-3" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold text-gray-600 w-[20%]">Tags</TableHead>
-              <TableHead>
-                <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
-                  Ngày tạo
-                  <ArrowUpDown className="ml-2 h-3 w-3" />
-                </Button>
-              </TableHead>
-              <TableHead className="font-semibold text-gray-600">AI CSKH</TableHead>
-              <TableHead className="text-center font-semibold text-gray-600">Lịch chăm sóc</TableHead>
-              <TableHead className="text-right pr-6 font-semibold text-gray-600">Hành động</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              [...Array(pageSize)].map((_, i) => (
-                <TableRow key={i} className="border-b-0">
-                  <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-10" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
-                  <TableCell className="pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+      <div className="flex-1 overflow-y-auto">
+        <div className="bg-white rounded-lg border shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50 border-b">
+                <TableHead className="pl-6 w-[30%]">
+                  <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
+                    Tên
+                    <ArrowUpDown className="ml-2 h-3 w-3" />
+                  </Button>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-600 w-[20%]">Tags</TableHead>
+                <TableHead>
+                  <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
+                    Ngày tạo
+                    <ArrowUpDown className="ml-2 h-3 w-3" />
+                  </Button>
+                </TableHead>
+                <TableHead className="font-semibold text-gray-600">AI CSKH</TableHead>
+                <TableHead className="text-center font-semibold text-gray-600">Lịch chăm sóc</TableHead>
+                <TableHead className="text-right pr-6 font-semibold text-gray-600">Hành động</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(pageSize)].map((_, i) => (
+                  <TableRow key={i} className="border-b-0">
+                    <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+                    <TableCell className="pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-red-500 h-48">
+                    Lỗi khi tải dữ liệu khách hàng.
+                  </TableCell>
                 </TableRow>
-              ))
-            ) : isError ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-red-500 h-48">
-                  Lỗi khi tải dữ liệu khách hàng.
-                </TableCell>
-              </TableRow>
-            ) : customers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-gray-500 h-48">
-                  Không có khách hàng nào.
-                </TableCell>
-              </TableRow>
-            ) : (
-              customers.map((customer) => (
-                <TableRow key={customer.id} className="hover:bg-gray-50">
-                  <TableCell className="pl-6">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={customer.avatar_url || '/placeholder.svg'} alt={customer.display_name || 'C'} />
-                        <AvatarFallback>{(customer.display_name || 'C').charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-semibold text-gray-800">{customer.display_name || 'Chưa có tên'}</div>
-                        {customer.zalo_name && (
-                          <div className="text-sm text-gray-500 italic">{customer.zalo_name}</div>
+              ) : customers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-gray-500 h-48">
+                    Không có khách hàng nào.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                customers.map((customer) => (
+                  <TableRow key={customer.id} className="hover:bg-gray-50">
+                    <TableCell className="pl-6">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage src={customer.avatar_url || '/placeholder.svg'} alt={customer.display_name || 'C'} />
+                          <AvatarFallback>{(customer.display_name || 'C').charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-semibold text-gray-800">{customer.display_name || 'Chưa có tên'}</div>
+                          {customer.zalo_name && (
+                            <div className="text-sm text-gray-500 italic">{customer.zalo_name}</div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {customer.tags?.slice(0, 2).map((tag) => (
+                          <Badge key={tag.id} className={cn("py-0.5 px-1.5 text-xs border-transparent", tag.color, "text-white")}>
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {customer.tags?.length > 2 && (
+                          <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
+                            +{customer.tags.length - 2}
+                          </Badge>
                         )}
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[200px]">
-                      {customer.tags?.slice(0, 2).map((tag) => (
-                        <Badge key={tag.id} className={cn("py-0.5 px-1.5 text-xs border-transparent", tag.color, "text-white")}>
-                          {tag.name}
-                        </Badge>
-                      ))}
-                      {customer.tags?.length > 2 && (
-                        <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
-                          +{customer.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd/MM/yyyy")}</TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={customer.ai_cskh_enabled}
-                      onCheckedChange={(checked) => {
-                        updateAiStatusMutation.mutate({ customerId: customer.id, enabled: checked });
-                      }}
-                      disabled={updateAiStatusMutation.isPending && updateAiStatusMutation.variables?.customerId === customer.id}
-                    />
-                  </TableCell>
-                  <TableCell className="text-center font-medium text-gray-700">
-                    {customer.scheduled_messages_count}
-                  </TableCell>
-                  <TableCell className="text-right pr-6">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendMessage(customer)}>
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(customer)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd/MM/yyyy")}</TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={customer.ai_cskh_enabled}
+                        onCheckedChange={(checked) => {
+                          updateAiStatusMutation.mutate({ customerId: customer.id, enabled: checked });
+                        }}
+                        disabled={updateAiStatusMutation.isPending && updateAiStatusMutation.variables?.customerId === customer.id}
+                      />
+                    </TableCell>
+                    <TableCell className="text-center font-medium text-gray-700">
+                      {customer.scheduled_messages_count}
+                    </TableCell>
+                    <TableCell className="text-right pr-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendMessage(customer)}>
+                          <MessageSquare className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:text-red-600" onClick={() => handleDeleteClick(customer)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <div className="flex justify-between items-center mt-4">
