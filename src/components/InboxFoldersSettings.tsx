@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, MoreVertical, Edit, Trash2, Loader2, Folder as FolderIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
-import { FolderForm } from './FolderForm';
+import { FolderForm } from '@/components/FolderForm';
 import { showSuccess, showError } from '@/utils/toast';
 import {
   DropdownMenu,
