@@ -14,9 +14,10 @@ interface InboxPanelProps {
   conversations: ConversationInboxItem[];
   selectedConversationId: string | null;
   onSelectConversation: (id: string) => void;
+  selectedFolderId: string | null;
 }
 
-const InboxPanel = ({ conversations, selectedConversationId, onSelectConversation }: InboxPanelProps) => {
+const InboxPanel = ({ conversations, selectedConversationId, onSelectConversation, selectedFolderId }: InboxPanelProps) => {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedConvIds, setSelectedConvIds] = useState<string[]>([]);
@@ -149,6 +150,7 @@ const InboxPanel = ({ conversations, selectedConversationId, onSelectConversatio
               isMultiSelected={selectedConvIds.includes(conv.id)}
               onMultiSelect={handleSelectOne}
               isSelectionMode={isSelectionMode}
+              selectedFolderId={selectedFolderId}
             />
           ))}
         </div>

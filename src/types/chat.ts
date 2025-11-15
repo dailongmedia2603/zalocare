@@ -1,4 +1,5 @@
 import { Tag } from "@/pages/Tags";
+import { InboxFolder } from "@/types/inbox";
 
 // Represents a customer from Zalo
 export interface ZaloCustomer {
@@ -27,6 +28,7 @@ export type ConversationInboxItem = {
   unread_count: number;
   customer: ZaloCustomer | null; // Customer can be null if not yet created in the customers table
   tags: Tag[];
+  folder: InboxFolder | null;
 };
 
 // Represents a single note for a customer

@@ -109,6 +109,7 @@ const Chat = () => {
         conversations={conversations || []}
         selectedConversationId={selectedConversationId}
         onSelectConversation={setSelectedConversationId}
+        selectedFolderId={selectedFolderId}
       />
       <ConversationPanel conversation={selectedConversation} />
       <CustomerInfoPanel conversation={selectedConversation} />

@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { ConversationInboxItem } from '@/types/chat';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { icons } from 'lucide-react';
+import { icons, Folder } from 'lucide-react';
 
 interface ConversationItemProps {
   conversation: ConversationInboxItem;
@@ -14,9 +14,10 @@ interface ConversationItemProps {
   isMultiSelected: boolean;
   onMultiSelect: (id: string, checked: boolean) => void;
   isSelectionMode: boolean;
+  selectedFolderId: string | null;
 }
 
-const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, onMultiSelect, isSelectionMode }: ConversationItemProps) => {
+const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, onMultiSelect, isSelectionMode, selectedFolderId }: ConversationItemProps) => {
   const customerName = conversation.customer?.display_name || 'Khách hàng mới';
   const avatarUrl = conversation.customer?.avatar_url;
   
@@ -63,24 +64,37 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
           </div>
         </div>
       </div>
-      {conversation.tags && conversation.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2 pl-12">
-          {conversation.tags.slice(0, 2).map(tag => {
-            const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
-            return (
-              <Badge key={tag.id} variant="secondary" className={cn("py-0.5 px-1.5 gap-1 text-xs", tag.color, "text-white")}>
-                <Icon className="w-2.5 h-2.5" />
-                {tag.name}
+      
+      <div className="pl-12 mt-2 space-y-1.5">
+        {conversation.tags && conversation.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {conversation.tags.slice(0, 2).map(tag => {
+              const Icon = icons[tag.icon as keyof typeof icons] || icons['Tag'];
+              return (
+                <Badge key={tag.id} variant="secondary" className={cn("py-0.5 px-1.5 gap-1 text-xs", tag.color, "text-white")}>
+                  <Icon className="w-2.5 h-2.5" />
+                  {tag.name}
+                </Badge>
+              )
+            })}
+            {conversation.tags.length > 2 && (
+              <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
+                +{conversation.tags.length - 2}
               </Badge>
-            )
-          })}
-          {conversation.tags.length > 2 && (
-            <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
-              +{conversation.tags.length - 2}
-            </Badge>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+
+        {selectedFolderId === null && conversation.folder && (
+          <div>
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+              <Folder className="h-3 w-3" />
+              {conversation.folder.name}
+            </div>
+          </div>
+        )}
+      </div>
+
       {isSelectionMode && (
         <div className="mt-2 pl-12">
           <Button
