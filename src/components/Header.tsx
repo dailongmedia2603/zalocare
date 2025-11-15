@@ -4,7 +4,6 @@ import {
   MessageSquare,
   Tag,
   BarChart3,
-  Files,
   LogOut,
   Image,
   Wand2,
@@ -93,9 +92,6 @@ const Header = () => {
       </nav>
       <div className="flex-1"></div>
       <div className="flex items-center gap-3">
-        <button className="flex items-center justify-center w-9 h-9 rounded-md border hover:bg-gray-100">
-            <Files className="w-5 h-5 text-gray-600" />
-        </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
