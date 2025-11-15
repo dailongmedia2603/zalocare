@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, MessageSquare, Mail, Inbox, ChevronsRight, X } from 'lucide-react';
+import { Search, MessageSquare, Inbox, ChevronsRight, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ConversationItem from './ConversationItem';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cn } from '@/lib/utils';
 import { ConversationInboxItem } from '@/types/chat';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MoveToFolder } from './MoveToFolder';
@@ -18,18 +17,13 @@ interface InboxPanelProps {
 }
 
 const InboxPanel = ({ conversations, selectedConversationId, onSelectConversation, selectedFolderId }: InboxPanelProps) => {
-  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedConvIds, setSelectedConvIds] = useState<string[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
-  const unreadCount = conversations.filter(c => c.unread_count > 0).length;
   const allCount = conversations.length;
 
   const filteredConversations = conversations.filter(conv => {
-    const filterPass = filter === 'unread' ? conv.unread_count > 0 : true;
-    if (!filterPass) return false;
-
     if (searchTerm.trim() === '') return true;
 
     const customerName = conv.customer?.display_name?.toLowerCase() || '';
@@ -76,37 +70,22 @@ const InboxPanel = ({ conversations, selectedConversationId, onSelectConversatio
             {isSelectionMode ? 'Hủy' : 'Di chuyển'}
           </Button>
         </div>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input
-            placeholder="Tìm kiếm khách hàng..."
-            className="pl-9"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="flex items-center gap-2 mt-3">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Tìm kiếm..."
+              className="pl-9"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className={cn("flex items-center gap-2", filter === 'unread' ? 'bg-orange-50 text-orange-600' : '')}
-                onClick={() => setFilter('unread')}
-              >
-                <Mail className="w-4 h-4" />
-                <span className="font-semibold">{unreadCount}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p>Chưa đọc</p></TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn("flex items-center gap-2", filter === 'all' ? 'bg-orange-50 text-orange-600' : '')}
-                onClick={() => setFilter('all')}
+                className="flex items-center gap-2 bg-orange-50 text-orange-600"
               >
                 <Inbox className="w-4 h-4" />
                 <span className="font-semibold">{allCount}</span>
