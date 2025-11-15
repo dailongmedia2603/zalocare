@@ -87,15 +87,12 @@ const Header = () => {
 
   return (
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
-      <div className="flex items-center w-auto mr-6 gap-3">
+      <div className="flex items-center w-auto mr-6">
         <img
-          src="/logo.svg"
-          className="w-9 h-9 object-contain"
+          src="/logo-full.svg"
+          className="h-9 w-auto object-contain"
           alt="Zalo.Care logo"
         />
-        <span className="text-black text-lg font-bold">
-          {"Zalo.Care"}
-        </span>
       </div>
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
