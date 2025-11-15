@@ -29,6 +29,8 @@ const navItems = [
   { name: 'Tag', icon: Tag, path: '/tags' },
   { name: 'Thư viện ảnh', icon: Image, path: '/media-library' },
   { name: 'Báo cáo', icon: BarChart3, path: '/reports' },
+  { name: 'Cấu hình Prompt', icon: Wand2, path: '/prompt-config' },
+  { name: 'Cài đặt', icon: Settings, path: '/settings' },
 ];
 
 const Header = () => {
@@ -103,15 +105,6 @@ const Header = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56" align="end" forceMount>
-            <DropdownMenuItem onClick={() => navigate('/prompt-config')}>
-              <Wand2 className="mr-2 h-4 w-4" />
-              <span>Cấu hình Prompt</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Cài đặt</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Đăng xuất</span>
