@@ -11,7 +11,7 @@ import { Calendar as CalendarIcon, Image as ImageIcon, Send, Trash2, Loader2, Cl
 import { format, set } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { showSuccess, showError, showLoading, dismissToast } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import ImageSelectorDialog from './ImageSelectorDialog';
 import { Skeleton } from '../ui/skeleton';
 import { Badge } from '../ui/badge';
@@ -39,6 +39,22 @@ const useScheduledMessages = (customerId: string) => {
   });
 };
 
+const useAiCskhStatus = (customerId: string) => {
+    return useQuery<{ ai_cskh_enabled: boolean }, Error>({
+        queryKey: ['aiCskhStatus', customerId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('customers')
+                .select('ai_cskh_enabled')
+                .eq('id', customerId)
+                .single();
+            if (error) throw new Error(error.message);
+            return data || { ai_cskh_enabled: false };
+        },
+        enabled: !!customerId,
+    });
+};
+
 const CareTab = ({ customerId, threadId }: CareTabProps) => {
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
@@ -48,6 +64,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
 
   const { data: scheduledMessages, isLoading } = useScheduledMessages(customerId);
+  const { data: aiStatus, isLoading: isLoadingAiStatus } = useAiCskhStatus(customerId);
 
   useEffect(() => {
     const channel = supabase
@@ -74,6 +91,18 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ['aiPromptLogs', customerId] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'customers',
+          filter: `id=eq.${customerId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['aiCskhStatus', customerId] });
         }
       )
       .subscribe();
@@ -109,45 +138,21 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
     onError: (error: Error) => showError(`Lỗi: ${error.message}`),
   });
 
-  const generateAiMessageMutation = useMutation<unknown, Error, void, { toastId: string | number }>({
-    mutationFn: async () => {
-      const hasPendingMessages = scheduledMessages?.some(msg => msg.status === 'pending');
-      if (hasPendingMessages) {
-        throw new Error('Đã có lịch chăm sóc đang chờ. AI sẽ không tạo thêm.');
-      }
-
-      // The Supabase client automatically includes the Authorization header.
-      // We just need to ensure a user is logged in.
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error('Không thể xác thực người dùng. Vui lòng đăng nhập lại.');
-      }
-
-      const { data, error } = await supabase.functions.invoke('generate-care-message', {
-        body: { threadId },
-      });
-
-      if (error) {
-        try {
-          const errorJson = await error.context.json();
-          throw new Error(errorJson.error || 'Lỗi không xác định từ function.');
-        } catch (e) {
-          throw new Error(error.message);
-        }
-      }
-      return data;
+  const updateAiStatusMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+        const { error } = await supabase
+            .from('customers')
+            .update({ ai_cskh_enabled: enabled })
+            .eq('id', customerId);
+        if (error) throw new Error(error.message);
+        return enabled;
     },
-    onMutate: () => {
-      const toastId = showLoading("AI đang phân tích và tạo lịch chăm sóc...");
-      return { toastId };
+    onSuccess: (enabled) => {
+        queryClient.invalidateQueries({ queryKey: ['aiCskhStatus', customerId] });
+        showSuccess(`Đã ${enabled ? 'bật' : 'tắt'} AI CSKH tự động.`);
     },
-    onSuccess: (data, variables, context) => {
-      if (context?.toastId) dismissToast(context.toastId as string);
-      showSuccess('AI đã tự động lên lịch chăm sóc thành công!');
-    },
-    onError: (error: Error, variables, context) => {
-      if (context?.toastId) dismissToast(context.toastId as string);
-      showError(`Lỗi: ${error.message}`);
+    onError: (error: Error) => {
+        showError(`Lỗi: ${error.message}`);
     },
   });
 
@@ -199,16 +204,14 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
             <AiLogsDialog customerId={customerId} />
             <Sparkles className="h-5 w-5 text-orange-500" />
             <Label htmlFor="ai-cskh-toggle" className="font-semibold text-sm text-gray-700">AI CSKH</Label>
-            <Switch
-              id="ai-cskh-toggle"
-              checked={generateAiMessageMutation.isPending}
-              onCheckedChange={(checked) => {
-                if (checked) {
-                  generateAiMessageMutation.mutate();
-                }
-              }}
-              disabled={generateAiMessageMutation.isPending}
-            />
+            {isLoadingAiStatus ? <Skeleton className="w-10 h-5 rounded-full" /> : (
+              <Switch
+                id="ai-cskh-toggle"
+                checked={aiStatus?.ai_cskh_enabled || false}
+                onCheckedChange={(checked) => updateAiStatusMutation.mutate(checked)}
+                disabled={updateAiStatusMutation.isPending}
+              />
+            )}
           </div>
         </div>
         <div className="space-y-3">
