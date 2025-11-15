@@ -38,7 +38,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   };
 
   const shouldShowContent = message.content && !isStructuredMessage(message.content);
-  const formattedTime = format(new Date(message.sent_at), 'HH:mm', { locale: vi });
+  const formattedTime = format(new Date(message.sent_at), 'HH:mm, dd/MM/yyyy', { locale: vi });
 
   return (
     <div className={cn('flex flex-col gap-1', isMe ? 'items-end' : 'items-start')}>
