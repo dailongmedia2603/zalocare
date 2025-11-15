@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   MessageSquare,
@@ -23,21 +23,66 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navItems = [
-  { name: 'Chat', icon: MessageSquare, path: '/' },
-  { name: 'Khách hàng', icon: Users, path: '/customers' },
-  { name: 'Tag', icon: Tag, path: '/tags' },
-  { name: 'Thư viện ảnh', icon: Image, path: '/media-library' },
-  { name: 'Báo cáo', icon: BarChart3, path: '/reports' },
-  { name: 'Cấu hình Prompt', icon: Wand2, path: '/prompt-config' },
-  { name: 'Cài đặt', icon: Settings, path: '/settings' },
-];
+interface Profile {
+  first_name: string | null;
+  last_name: string | null;
+  avatar_url: string | null;
+}
 
 const Header = () => {
   const navigate = useNavigate();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email || null);
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error("Error fetching profile:", error);
+        } else {
+          setProfile(data);
+        }
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
+
+  const getInitials = () => {
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`;
+    }
+    if (profile?.first_name) {
+      return profile.first_name[0];
+    }
+    if (userEmail) {
+      return userEmail[0];
+    }
+    return 'U';
+  };
+
+  const fullName = `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim();
+
+  const navItems = [
+    { name: 'Chat', icon: MessageSquare, path: '/' },
+    { name: 'Khách hàng', icon: Users, path: '/customers' },
+    { name: 'Tag', icon: Tag, path: '/tags' },
+    { name: 'Thư viện ảnh', icon: Image, path: '/media-library' },
+    { name: 'Báo cáo', icon: BarChart3, path: '/reports' },
+    { name: 'Cấu hình Prompt', icon: Wand2, path: '/prompt-config' },
+    { name: 'Cài đặt', icon: Settings, path: '/settings' },
+  ];
 
   return (
     <header className="flex items-center self-stretch bg-white py-3 px-4 border-b">
@@ -96,8 +141,8 @@ const Header = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="/placeholder.svg" alt="Avatar" />
-                <AvatarFallback>U</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url || undefined} alt={fullName || 'Avatar'} />
+                <AvatarFallback>{getInitials().toUpperCase()}</AvatarFallback>
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
