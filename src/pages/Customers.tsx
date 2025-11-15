@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Calendar as CalendarIcon, ArrowUpDown, Users, UserPlus, MessageSquare, Trash2, Loader2, Search } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, MessageSquare, Trash2, Loader2, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DateRange } from "react-day-picker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -47,6 +47,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { showSuccess, showError } from '@/utils/toast';
 import { TagFilter } from '@/components/customers/TagFilter';
+import { Tag } from '@/pages/Tags';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 
 interface Customer {
   id: string;
@@ -55,6 +58,9 @@ interface Customer {
   zalo_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  tags: Tag[];
+  ai_cskh_enabled: boolean;
+  scheduled_messages_count: number;
 }
 
 const useCustomers = (page: number, pageSize: number, filters: {
@@ -145,6 +151,33 @@ const Customers = () => {
     onError: (error: Error) => {
       showError(`Lỗi khi xóa: ${error.message}`);
       setCustomerToDelete(null);
+    },
+  });
+
+  const updateAiStatusMutation = useMutation({
+    mutationFn: async ({ customerId, enabled }: { customerId: string, enabled: boolean }) => {
+      const { error } = await supabase
+        .from('customers')
+        .update({ ai_cskh_enabled: enabled })
+        .eq('id', customerId);
+      if (error) throw new Error(error.message);
+      return { customerId, enabled };
+    },
+    onSuccess: ({ customerId, enabled }) => {
+      queryClient.setQueryData(['customers', page, pageSize, date, debouncedSearchTerm, selectedTagIds], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          customers: oldData.customers.map((c: Customer) =>
+            c.id === customerId ? { ...c, ai_cskh_enabled: enabled } : c
+          ),
+        };
+      });
+      showSuccess(`Đã ${enabled ? 'bật' : 'tắt'} AI CSKH.`);
+    },
+    onError: (error: Error) => {
+      showError(`Lỗi: ${error.message}`);
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });
 
@@ -255,18 +288,21 @@ const Customers = () => {
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50 border-b">
-              <TableHead className="pl-6">
+              <TableHead className="pl-6 w-[30%]">
                 <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
                   Tên
                   <ArrowUpDown className="ml-2 h-3 w-3" />
                 </Button>
               </TableHead>
+              <TableHead className="font-semibold text-gray-600 w-[20%]">Tags</TableHead>
               <TableHead>
                 <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
                   Ngày tạo
                   <ArrowUpDown className="ml-2 h-3 w-3" />
                 </Button>
               </TableHead>
+              <TableHead className="font-semibold text-gray-600">AI CSKH</TableHead>
+              <TableHead className="text-center font-semibold text-gray-600">Lịch chăm sóc</TableHead>
               <TableHead className="text-right pr-6 font-semibold text-gray-600">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -276,18 +312,21 @@ const Customers = () => {
                 <TableRow key={i} className="border-b-0">
                   <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                   <TableCell className="pr-6"><Skeleton className="h-8 w-20 ml-auto" /></TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-red-500 h-48">
+                <TableCell colSpan={6} className="text-center text-red-500 h-48">
                   Lỗi khi tải dữ liệu khách hàng.
                 </TableCell>
               </TableRow>
             ) : customers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-gray-500 h-48">
+                <TableCell colSpan={6} className="text-center text-gray-500 h-48">
                   Không có khách hàng nào.
                 </TableCell>
               </TableRow>
@@ -308,7 +347,33 @@ const Customers = () => {
                       </div>
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1 max-w-[200px]">
+                      {customer.tags.slice(0, 2).map((tag) => (
+                        <Badge key={tag.id} className={cn("py-0.5 px-1.5 text-xs border-transparent", tag.color, "text-white")}>
+                          {tag.name}
+                        </Badge>
+                      ))}
+                      {customer.tags.length > 2 && (
+                        <Badge variant="secondary" className="py-0.5 px-1.5 text-xs">
+                          +{customer.tags.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-gray-500">{format(new Date(customer.created_at), "dd/MM/yyyy")}</TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={customer.ai_cskh_enabled}
+                      onCheckedChange={(checked) => {
+                        updateAiStatusMutation.mutate({ customerId: customer.id, enabled: checked });
+                      }}
+                      disabled={updateAiStatusMutation.isPending && updateAiStatusMutation.variables?.customerId === customer.id}
+                    />
+                  </TableCell>
+                  <TableCell className="text-center font-medium text-gray-700">
+                    {customer.scheduled_messages_count}
+                  </TableCell>
                   <TableCell className="text-right pr-6">
                     <div className="flex items-center justify-end gap-2">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleSendMessage(customer)}>
