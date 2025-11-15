@@ -5,6 +5,8 @@ import {
   DialogContent,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 interface MessageBubbleProps {
   message: ZaloMessage;
@@ -36,9 +38,10 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
   };
 
   const shouldShowContent = message.content && !isStructuredMessage(message.content);
+  const formattedTime = format(new Date(message.sent_at), 'HH:mm', { locale: vi });
 
   return (
-    <div className={cn('flex items-end gap-2', isMe ? 'justify-end' : 'justify-start')}>
+    <div className={cn('flex flex-col gap-1', isMe ? 'items-end' : 'items-start')}>
       <div
         className={cn(
           'max-w-[70%] p-3 rounded-2xl',
@@ -71,6 +74,7 @@ const MessageBubble = ({ message }: MessageBubbleProps) => {
           </Dialog>
         )}
       </div>
+      <span className="text-xs text-gray-400 px-1">{formattedTime}</span>
     </div>
   );
 };
