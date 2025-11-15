@@ -90,7 +90,7 @@ const Header = () => {
       <div className="flex items-center w-auto mr-6">
         <img
           src="/logo-full.png"
-          className="h-9 w-auto object-contain"
+          className="h-12 w-auto object-contain"
           alt="Zalo.Care logo"
         />
       </div>
