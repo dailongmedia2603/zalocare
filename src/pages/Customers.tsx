@@ -50,6 +50,8 @@ import { TagFilter } from '@/components/customers/TagFilter';
 import { Tag } from '@/pages/Tags';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { BulkTagAssigner } from '@/components/customers/BulkTagAssigner';
 
 interface Customer {
   id: string;
@@ -121,6 +123,7 @@ const Customers = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [aiCskhStatus, setAiCskhStatus] = useState<'all' | 'enabled' | 'disabled'>('all');
+  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
 
   // Debounce search term
   useEffect(() => {
@@ -130,9 +133,10 @@ const Customers = () => {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Reset page on filter change
+  // Reset page and selection on filter change
   useEffect(() => {
     setPage(1);
+    setSelectedCustomerIds([]);
   }, [date, debouncedSearchTerm, selectedTagIds, pageSize, aiCskhStatus]);
 
   const { data, isLoading, isError } = useCustomers(page, pageSize, {
@@ -141,6 +145,15 @@ const Customers = () => {
     selectedTagIds,
     aiCskhStatus,
   });
+
+  const customers = data?.customers || [];
+  const totalCustomers = data?.count || 0;
+  const totalPages = Math.ceil(totalCustomers / pageSize);
+
+  useEffect(() => {
+    // Clear selection if customers data changes (e.g., due to pagination)
+    setSelectedCustomerIds([]);
+  }, [data?.customers]);
 
   const deleteCustomerMutation = useMutation({
     mutationFn: async (customerId: string) => {
@@ -193,10 +206,6 @@ const Customers = () => {
     setCustomerToDelete(customer);
   };
 
-  const customers = data?.customers || [];
-  const totalCustomers = data?.count || 0;
-  const totalPages = Math.ceil(totalCustomers / pageSize);
-
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage);
@@ -235,9 +244,9 @@ const Customers = () => {
 
   return (
     <div className="flex-1 p-6 w-full flex flex-col overflow-hidden">
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Tìm kiếm theo tên..."
@@ -257,8 +266,6 @@ const Customers = () => {
               <SelectItem value="disabled">Đã tắt</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex items-center gap-2">
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -297,13 +304,34 @@ const Customers = () => {
           </Popover>
         </div>
       </div>
+      
+      {selectedCustomerIds.length > 0 && (
+        <div className="flex items-center gap-4 mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+          <span className="text-sm font-semibold text-orange-700">
+            Đã chọn {selectedCustomerIds.length} khách hàng
+          </span>
+          <BulkTagAssigner 
+            selectedCustomerIds={selectedCustomerIds}
+            onSuccess={() => setSelectedCustomerIds([])}
+          />
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto">
         <div className="bg-white rounded-lg border shadow-sm">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50 border-b">
-                <TableHead className="pl-6 w-[30%]">
+                <TableHead className="w-12 pl-4">
+                  <Checkbox
+                    checked={selectedCustomerIds.length > 0 && selectedCustomerIds.length === customers.length}
+                    onCheckedChange={(checked) => {
+                      setSelectedCustomerIds(checked ? customers.map(c => c.id) : []);
+                    }}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+                <TableHead className="w-[30%]">
                   <Button variant="ghost" size="sm" className="font-semibold text-gray-600 -ml-4">
                     Tên
                     <ArrowUpDown className="ml-2 h-3 w-3" />
@@ -325,7 +353,8 @@ const Customers = () => {
               {isLoading ? (
                 [...Array(pageSize)].map((_, i) => (
                   <TableRow key={i} className="border-b-0">
-                    <TableCell className="pl-6"><Skeleton className="h-8 w-full" /></TableCell>
+                    <TableCell className="pl-4"><Skeleton className="h-5 w-5" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-10" /></TableCell>
@@ -335,20 +364,33 @@ const Customers = () => {
                 ))
               ) : isError ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-red-500 h-48">
+                  <TableCell colSpan={7} className="text-center text-red-500 h-48">
                     Lỗi khi tải dữ liệu khách hàng.
                   </TableCell>
                 </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500 h-48">
+                  <TableCell colSpan={7} className="text-center text-gray-500 h-48">
                     Không có khách hàng nào.
                   </TableCell>
                 </TableRow>
               ) : (
                 customers.map((customer) => (
-                  <TableRow key={customer.id} className="hover:bg-gray-50">
-                    <TableCell className="pl-6">
+                  <TableRow key={customer.id} className="hover:bg-gray-50" data-state={selectedCustomerIds.includes(customer.id) && "selected"}>
+                    <TableCell className="pl-4">
+                      <Checkbox
+                        checked={selectedCustomerIds.includes(customer.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedCustomerIds(
+                            checked
+                              ? [...selectedCustomerIds, customer.id]
+                              : selectedCustomerIds.filter((id) => id !== customer.id)
+                          );
+                        }}
+                        aria-label="Select row"
+                      />
+                    </TableCell>
+                    <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={customer.avatar_url || '/placeholder.svg'} alt={customer.display_name || 'C'} />
