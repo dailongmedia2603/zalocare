@@ -116,9 +116,15 @@ const ConversationPanel = ({ conversation }: ConversationPanelProps) => {
   };
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight });
-    }
+    // Use a timeout to allow the DOM to update with new messages before scrolling
+    setTimeout(() => {
+      if (scrollAreaRef.current) {
+        const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
+        if (viewport) {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'auto' });
+        }
+      }
+    }, 0);
   }, [messages]);
 
   if (!conversation) {
