@@ -33,8 +33,8 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
         isSelected ? 'bg-orange-50 border-orange-500' : 'hover:bg-gray-50 border-transparent'
       )}
     >
-      <div className="flex items-start w-full">
-        <Avatar className="w-10 h-10 mr-3">
+      <div className="flex items-start w-full gap-3">
+        <Avatar className="w-10 h-10">
           <AvatarImage src={avatarUrl || '/placeholder.svg'} alt={customerName} />
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
@@ -43,12 +43,12 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
             <h3 className="font-semibold text-sm truncate">{customerName}</h3>
             <span className="text-xs text-gray-500 flex-shrink-0">{timeAgo}</span>
           </div>
-          <div className="flex justify-between items-start mt-1">
-            <p className="text-xs text-gray-500 truncate">
+          <div className="flex justify-between items-start mt-1 gap-2">
+            <p className="flex-1 text-xs text-gray-500 truncate min-w-0">
               {conversation.last_message_preview}
             </p>
             {conversation.unread_count > 0 && (
-              <Badge className="bg-orange-500 text-white h-5 px-2 ml-2 flex-shrink-0">{conversation.unread_count}</Badge>
+              <Badge className="bg-orange-500 text-white h-5 px-2 flex-shrink-0">{conversation.unread_count}</Badge>
             )}
           </div>
         </div>
