@@ -25,6 +25,17 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
     ? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true, locale: vi })
     : '';
 
+  const truncatePreview = (text: string | null | undefined, maxWords: number = 9): string => {
+    if (!text) return '';
+    const words = text.split(/\s+/);
+    if (words.length > maxWords) {
+      return words.slice(0, maxWords).join(' ') + '...';
+    }
+    return text;
+  };
+
+  const truncatedMessage = truncatePreview(conversation.last_message_preview);
+
   return (
     <div
       onClick={() => onClick(conversation.id)}
@@ -41,7 +52,7 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm truncate">{customerName}</h3>
           <p className="text-xs text-gray-500 truncate mt-1">
-            {conversation.last_message_preview}
+            {truncatedMessage}
           </p>
         </div>
         <div className="flex flex-col items-end flex-shrink-0 space-y-1">
