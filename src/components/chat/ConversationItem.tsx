@@ -39,18 +39,16 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
           <AvatarFallback>{customerName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <div className="flex justify-between items-center gap-2">
-            <h3 className="font-semibold text-sm truncate">{customerName}</h3>
-            <span className="text-xs text-gray-500 flex-shrink-0">{timeAgo}</span>
-          </div>
-          <div className="flex justify-between items-start mt-1 gap-2">
-            <p className="flex-1 text-xs text-gray-500 truncate min-w-0">
-              {conversation.last_message_preview}
-            </p>
-            {conversation.unread_count > 0 && (
-              <Badge className="bg-orange-500 text-white h-5 px-2 flex-shrink-0">{conversation.unread_count}</Badge>
-            )}
-          </div>
+          <h3 className="font-semibold text-sm truncate">{customerName}</h3>
+          <p className="text-xs text-gray-500 truncate mt-1">
+            {conversation.last_message_preview}
+          </p>
+        </div>
+        <div className="flex flex-col items-end flex-shrink-0 space-y-1">
+          <span className="text-xs text-gray-500">{timeAgo}</span>
+          {conversation.unread_count > 0 && (
+            <Badge className="bg-orange-500 text-white h-5 px-2">{conversation.unread_count}</Badge>
+          )}
         </div>
       </div>
       
