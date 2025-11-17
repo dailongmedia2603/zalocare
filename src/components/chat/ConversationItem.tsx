@@ -51,7 +51,7 @@ const ConversationItem = ({ conversation, isSelected, onClick, isMultiSelected, 
         </Avatar>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm truncate">{customerName}</h3>
-          <p className="text-xs text-gray-500 truncate mt-1">
+          <p className="text-xs text-gray-500 mt-1">
             {truncatedMessage}
           </p>
         </div>
