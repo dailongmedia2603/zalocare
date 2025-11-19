@@ -21,30 +21,21 @@ serve(async (req) => {
       })
     }
 
-    const geminiToken = Deno.env.get('GEMINI_API_TOKEN');
-    if (!geminiToken) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        message: 'Lỗi cấu hình phía server.',
-        details: 'Biến môi trường GEMINI_API_TOKEN chưa được thiết lập trong phần Secrets của Supabase Edge Function.' 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-      })
-    }
+    const testPrompt = prompt || 'Trịnh Trần Phương Tuấn là ai?';
 
-    const testPrompt = prompt || 'Nguyễn Quang Hải là ai ?';
-
-    // Sử dụng FormData để gửi yêu cầu multipart/form-data
-    const formData = new FormData();
-    formData.append('prompt', testPrompt);
-    formData.append('token', geminiToken);
+    // Use URLSearchParams to send as application/x-www-form-urlencoded
+    const body = new URLSearchParams();
+    body.append('prompt', testPrompt);
 
     const response = await fetch(apiUrl, {
       method: 'POST',
-      // Không cần set Content-Type, fetch sẽ tự động làm điều đó cho FormData
-      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body,
     });
+
+    const responseText = await response.text();
 
     // If it's a connection test (no prompt sent from client), return simple status
     if (!prompt) {
@@ -54,24 +45,31 @@ serve(async (req) => {
           status: 200,
         })
       } else {
-        const errorText = await response.text();
-        return new Response(JSON.stringify({ success: false, message: `Connection failed: ${response.status} ${response.statusText}`, details: errorText }), {
+        return new Response(JSON.stringify({ success: false, message: `Connection failed: ${response.status} ${response.statusText}`, details: responseText }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: response.status,
         })
       }
     }
 
-    // If it's a prompt test, return the full response body
+    // If it's a prompt test, return the response
     if (response.ok) {
-      const responseData = await response.json();
-      return new Response(JSON.stringify(responseData), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      })
+      try {
+        // Try to parse as JSON first
+        const responseData = JSON.parse(responseText);
+        return new Response(JSON.stringify(responseData), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      } catch (e) {
+        // If not JSON, return as plain text inside a JSON object for consistency
+        return new Response(JSON.stringify({ answer: responseText }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        })
+      }
     } else {
-      const errorText = await response.text();
-      return new Response(JSON.stringify({ success: false, message: `API call failed: ${response.status} ${response.statusText}`, details: errorText }), {
+      return new Response(JSON.stringify({ success: false, message: `API call failed: ${response.status} ${response.statusText}`, details: responseText }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: response.status,
       })

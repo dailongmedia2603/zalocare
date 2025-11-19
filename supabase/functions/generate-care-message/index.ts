@@ -26,11 +26,9 @@ serve(async (req) => {
 
   try {
     // 1. Get threadId and userId from the request body.
-    // The request is trusted because it comes from another Edge Function
-    // which is protected by a cron secret. We no longer need to validate the JWT here.
     const body = await req.json();
     threadId = body.threadId;
-    userId = body.user_id; // Get user_id directly from the body
+    userId = body.user_id; 
 
     if (!threadId || !userId) {
       throw new Error('threadId and user_id are required in the request body');
@@ -62,15 +60,17 @@ serve(async (req) => {
     prompt_text = prompt_text.replace('{{CUSTOMER_NAME}}', customerName);
     prompt_text = prompt_text.replace('{{CURRENT_DATETIME}}', new Date().toISOString());
 
-    // 5. Call Gemini API
-    const geminiToken = Deno.env.get('GEMINI_API_TOKEN');
-    if (!geminiToken) throw new Error("GEMINI_API_TOKEN is not set.");
+    // 5. Call Gemini API using application/x-www-form-urlencoded
+    const apiBody = new URLSearchParams();
+    apiBody.append('prompt', prompt_text);
 
-    const formData = new FormData();
-    formData.append('prompt', prompt_text);
-    formData.append('token', geminiToken);
-
-    const geminiResponse = await fetch(gemini_api_url, { method: 'POST', body: formData });
+    const geminiResponse = await fetch(gemini_api_url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: apiBody,
+    });
     responseText = await geminiResponse.text();
 
     if (!geminiResponse.ok) {
@@ -80,16 +80,14 @@ serve(async (req) => {
     // 6. Robustly parse the Gemini response
     let result;
     try {
-      const initialResponse = JSON.parse(responseText);
-      const answerString = initialResponse.answer || responseText;
-      const jsonMatch = answerString.match(/```json\s*([\s\S]*?)\s*```/);
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/);
       if (jsonMatch && jsonMatch[1]) {
         result = JSON.parse(jsonMatch[1]);
       } else {
-        result = JSON.parse(answerString);
+        result = JSON.parse(responseText);
       }
     } catch (e) {
-      throw new Error(`Could not parse JSON from Gemini response.`);
+      throw new Error(`Could not parse JSON from Gemini response. Raw response: ${responseText}`);
     }
 
     // 7. Validate the parsed JSON
