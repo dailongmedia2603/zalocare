@@ -49,7 +49,7 @@ export interface ScheduledMessage {
   content: string | null;
   image_url: string | null;
   scheduled_at: string;
-  status: 'pending' | 'sent' | 'failed';
+  status: 'pending' | 'processing' | 'sent' | 'failed';
   created_at: string;
   prompt_log: string | null;
 }

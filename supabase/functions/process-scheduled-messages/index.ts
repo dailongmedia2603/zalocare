@@ -25,15 +25,17 @@ serve(async (req) => {
   )
 
   try {
-    // 1. Fetch all pending messages that are due
+    // 1. Atomically fetch and "lock" due messages by updating their status to 'processing'.
+    // This prevents other concurrent function invocations from picking up the same messages.
     const { data: messages, error: fetchError } = await supabaseAdmin
       .from('scheduled_messages')
-      .select('*')
+      .update({ status: 'processing' })
       .eq('status', 'pending')
-      .lte('scheduled_at', new Date().toISOString());
+      .lte('scheduled_at', new Date().toISOString())
+      .select(); // .select() after .update() acts like RETURNING *, making the operation atomic.
 
     if (fetchError) {
-      console.error('Error fetching scheduled messages:', fetchError);
+      console.error('Error fetching and locking scheduled messages:', fetchError);
       throw fetchError;
     }
 
@@ -68,7 +70,7 @@ serve(async (req) => {
 
     const settingsMap = new Map(settings.map(s => [s.user_id, s.n8n_webhook_url]));
 
-    // 2. Process each message
+    // 2. Process each message that was locked
     const processingPromises = messages.map(async (message) => {
       // Trim the URL to remove any accidental whitespace
       const webhookUrl = settingsMap.get(message.user_id)?.trim();

@@ -191,6 +191,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
 
   const statusConfig = {
     pending: { label: 'Chờ gửi', className: 'bg-yellow-500 hover:bg-yellow-600 text-white' },
+    processing: { label: 'Đang xử lý', className: 'bg-blue-500 hover:bg-blue-600 text-white' },
     sent: { label: 'Đã gửi', className: 'bg-green-500 hover:bg-green-600 text-white' },
     failed: { label: 'Thất bại', className: 'bg-red-500 hover:bg-red-600 text-white' },
   };
@@ -290,6 +291,7 @@ const CareTab = ({ customerId, threadId }: CareTabProps) => {
                 className={cn(
                   'p-3 rounded-lg border',
                   msg.status === 'pending' ? 'bg-yellow-50 border-yellow-200' : 
+                  msg.status === 'processing' ? 'bg-blue-50 border-blue-200' :
                   msg.status === 'failed' ? 'bg-red-50 border-red-200' : 'bg-gray-50/80'
                 )}
               >
