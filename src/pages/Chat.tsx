@@ -25,6 +25,11 @@ const Chat = () => {
         queryClient.invalidateQueries({ queryKey: ['conversations'] });
       }
 
+      // If the change is a new message, also invalidate the specific message query
+      if (payload.table === 'zalo_events' && payload.new?.threadId) {
+        queryClient.invalidateQueries({ queryKey: ['messages', payload.new.threadId] });
+      }
+
       // Invalidate notes for a specific customer (for the right-side panel)
       if (payload.table === 'notes') {
         const customerId = payload.new?.customer_id || payload.old?.customer_id;
